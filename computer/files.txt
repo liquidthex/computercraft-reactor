@@ -1,4 +1,0 @@
-update.lua
-motd.txt
-monitor.lua
-computer.lua
