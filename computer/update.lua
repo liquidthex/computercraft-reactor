@@ -1,5 +1,5 @@
 -- update.lua
--- Update script for ComputerCraft
+-- Update script for ComputerCraft with cache busting and commit hash display
 
 -- Configuration
 local githubUser = 'liquidthex'
@@ -9,10 +9,13 @@ local folderPath = 'computer'
 
 local baseURL = 'https://raw.githubusercontent.com/' .. githubUser .. '/' .. githubRepo .. '/' .. githubBranch .. '/' .. folderPath .. '/'
 
+-- Seed the random number generator
+math.randomseed(os.time())
+
 -- Function to download a file with cache busting
 local function downloadFile(filePath)
-    -- Generate a cache-busting query parameter using os.epoch()
-    local cacheBuster = '?cb=' .. os.epoch("utc")
+    -- Generate a cache-busting query parameter
+    local cacheBuster = '?cb=' .. math.random(1, 1000000)
     local url = baseURL .. filePath .. cacheBuster
 
     local response = http.get(url)
@@ -33,6 +36,24 @@ local function downloadFile(filePath)
     end
 end
 
+-- Function to get the latest commit hash from GitHub API
+local function getLatestCommitHash()
+    local apiURL = 'https://api.github.com/repos/' .. githubUser .. '/' .. githubRepo .. '/commits/' .. githubBranch
+    local response = http.get(apiURL)
+
+    if response then
+        local jsonResponse = response.readAll()
+        response.close()
+
+        -- Extract the commit SHA using pattern matching
+        local commitSHA = jsonResponse:match('"sha"%s*:%s*"(%w+)"')
+        return commitSHA
+    else
+        print('Failed to retrieve the latest commit hash.')
+        return nil
+    end
+end
+
 -- Ensure HTTP API is enabled
 if not http then
     print('HTTP API is not enabled in ComputerCraft.')
@@ -40,8 +61,12 @@ if not http then
     return
 end
 
+-- Get the latest commit hash
+local commitHash = getLatestCommitHash()
+
 -- Download files.txt to get the list of files
-local filesTxtUrl = baseURL .. 'files.txt' .. '?cb=' .. os.epoch("utc")
+local cacheBuster = '?cb=' .. math.random(1, 1000000)
+local filesTxtUrl = baseURL .. 'files.txt' .. cacheBuster
 local response = http.get(filesTxtUrl)
 local files = {}
 
@@ -75,4 +100,9 @@ if fs.exists("startup.lua") then
 end
 downloadFile("startup.lua")
 
-print('Update complete.')
+-- Display the commit hash in the final message
+if commitHash then
+    print('Update complete. Updated to commit: ' .. commitHash)
+else
+    print('Update complete.')
+end
