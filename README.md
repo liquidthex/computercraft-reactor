@@ -1,2 +1,3 @@
 # computercraft-reactor
-Controlling computercraft fission reactor
+Liquidthex's ComputerCraft Fission Reactor Controller
+
