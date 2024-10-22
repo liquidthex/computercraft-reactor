@@ -93,10 +93,17 @@ end
 local monitor = peripheral.find("monitor")
 local reactor = peripheral.find("fissionReactorLogicAdapter")
 
--- If both peripherals are present, run reactorControl.lua
+-- If both peripherals are present, run reactorControl.lua in the background
 if monitor and reactor then
     if fs.exists("thexos/reactorControl.lua") then
-        shell.run("thexos/reactorControl.lua")
+        if multishell then
+            -- Launch reactorControl.lua in a new tab
+            multishell.launch({}, "thexos/reactorControl.lua")
+            print("Launched reactorControl.lua in background.")
+        else
+            -- Run reactorControl.lua normally
+            shell.run("thexos/reactorControl.lua")
+        end
     else
         print("reactorControl.lua not found.")
     end
