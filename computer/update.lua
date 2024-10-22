@@ -9,9 +9,12 @@ local folderPath = 'computer'
 
 local baseURL = 'https://raw.githubusercontent.com/' .. githubUser .. '/' .. githubRepo .. '/' .. githubBranch .. '/' .. folderPath .. '/'
 
--- Function to download a file
+-- Function to download a file with cache busting
 local function downloadFile(filePath)
-    local url = baseURL .. filePath
+    -- Generate a cache-busting query parameter using os.epoch()
+    local cacheBuster = '?cb=' .. os.epoch("utc")
+    local url = baseURL .. filePath .. cacheBuster
+
     local response = http.get(url)
     if response then
         -- Create any necessary subdirectories
@@ -38,7 +41,7 @@ if not http then
 end
 
 -- Download files.txt to get the list of files
-local filesTxtUrl = baseURL .. 'files.txt'
+local filesTxtUrl = baseURL .. 'files.txt' .. '?cb=' .. os.epoch("utc")
 local response = http.get(filesTxtUrl)
 local files = {}
 
