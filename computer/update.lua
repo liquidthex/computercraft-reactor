@@ -102,7 +102,7 @@ downloadFile("startup.lua")
 
 -- Display the commit hash in the final message
 if commitHash then
-    print('Update complete. Updated to commit: ' .. commitHash)
+    print('Updated to commit: ' .. commitHash)
 else
     print('Update complete.')
 end
