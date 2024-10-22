@@ -24,7 +24,7 @@ if not reactor then
 end
 
 -- Monitor setup
-monitor.setTextScale(0.3)  -- Adjust text scale as needed
+monitor.setTextScale(0.5)  -- Adjust text scale as needed
 monitor.setBackgroundColor(colors.black)
 monitor.setTextColor(colors.white)
 monitor.clear()
@@ -96,15 +96,15 @@ while true do
     monitor.setCursorPos(1,9)
     monitor.write("")
 
-    monitor.write("Heated Coolant:")
-    monitor.setCursorPos(1,10)
-    monitor.write(" - Type: " .. (heatedCoolant.name or "None"))
-    monitor.setCursorPos(1,11)
-    monitor.write(" - Amount: " .. formatNumber(heatedCoolant.amount or 0))
-    monitor.setCursorPos(1,12)
-    monitor.write(string.format(" - Filled: %.2f%%", heatedCoolantPercent))
-    monitor.setCursorPos(1,13)
-    monitor.write("")
+--    monitor.write("Heated Coolant:")
+--    monitor.setCursorPos(1,10)
+--    monitor.write(" - Type: " .. (heatedCoolant.name or "None"))
+--    monitor.setCursorPos(1,11)
+--    monitor.write(" - Amount: " .. formatNumber(heatedCoolant.amount or 0))
+--    monitor.setCursorPos(1,12)
+--    monitor.write(string.format(" - Filled: %.2f%%", heatedCoolantPercent))
+--    monitor.setCursorPos(1,13)
+--    monitor.write("")
 
     monitor.write("Fuel:")
     monitor.setCursorPos(1,14)
