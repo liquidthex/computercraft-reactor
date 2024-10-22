@@ -9,7 +9,7 @@ local updateInterval = 5          -- Time in seconds between updates
 -- Wrap the monitor peripheral
 local monitor = peripheral.wrap(monitorSide)
 
--- Find the reactor peripheral
+-- Wrap the reactor peripheral
 local reactor = peripheral.wrap(reactorName)
 
 -- Check if the peripherals are connected
@@ -53,8 +53,6 @@ while true do
     local damagePercent = reactor.getDamagePercent()
     local coolant = reactor.getCoolant()
     local coolantPercent = reactor.getCoolantFilledPercentage() * 100
-    local heatedCoolant = reactor.getHeatedCoolant()
-    local heatedCoolantPercent = reactor.getHeatedCoolantFilledPercentage() * 100
     local fuel = reactor.getFuel()
     local fuelPercent = reactor.getFuelFilledPercentage() * 100
     local fuelNeeded = reactor.getFuelNeeded()
@@ -96,46 +94,36 @@ while true do
     monitor.setCursorPos(1,9)
     monitor.write("")
 
---    monitor.write("Heated Coolant:")
---    monitor.setCursorPos(1,10)
---    monitor.write(" - Type: " .. (heatedCoolant.name or "None"))
---    monitor.setCursorPos(1,11)
---    monitor.write(" - Amount: " .. formatNumber(heatedCoolant.amount or 0))
---    monitor.setCursorPos(1,12)
---    monitor.write(string.format(" - Filled: %.2f%%", heatedCoolantPercent))
---    monitor.setCursorPos(1,13)
---    monitor.write("")
-
     monitor.write("Fuel:")
-    monitor.setCursorPos(1,14)
+    monitor.setCursorPos(1,10)
     monitor.write(" - Type: " .. (fuel.name or "None"))
-    monitor.setCursorPos(1,15)
+    monitor.setCursorPos(1,11)
     monitor.write(" - Amount: " .. formatNumber(fuel.amount or 0))
-    monitor.setCursorPos(1,16)
+    monitor.setCursorPos(1,12)
     monitor.write(string.format(" - Filled: %.2f%%", fuelPercent))
-    monitor.setCursorPos(1,17)
+    monitor.setCursorPos(1,13)
     monitor.write("")
 
     monitor.write("Waste:")
-    monitor.setCursorPos(1,18)
+    monitor.setCursorPos(1,14)
     monitor.write(" - Type: " .. (waste.name or "None"))
-    monitor.setCursorPos(1,19)
+    monitor.setCursorPos(1,15)
     monitor.write(" - Amount: " .. formatNumber(waste.amount or 0))
-    monitor.setCursorPos(1,20)
+    monitor.setCursorPos(1,16)
     monitor.write(string.format(" - Filled: %.2f%%", wastePercent))
-    monitor.setCursorPos(1,21)
+    monitor.setCursorPos(1,17)
     monitor.write("")
 
     monitor.write(string.format("Burn Rate: %.2f mB/t", burnRate))
-    monitor.setCursorPos(1,22)
+    monitor.setCursorPos(1,18)
     monitor.write(string.format("Actual Burn Rate: %.2f mB/t", actualBurnRate))
-    monitor.setCursorPos(1,23)
+    monitor.setCursorPos(1,19)
     monitor.write(string.format("Max Burn Rate: %.2f mB/t", maxBurnRate))
-    monitor.setCursorPos(1,24)
+    monitor.setCursorPos(1,20)
     monitor.write(string.format("Heating Rate: %s mB/t", formatNumber(heatingRate)))
-    monitor.setCursorPos(1,25)
+    monitor.setCursorPos(1,21)
     monitor.write(string.format("Environmental Loss: %.2f", environmentalLoss))
-    monitor.setCursorPos(1,26)
+    monitor.setCursorPos(1,22)
     monitor.write("Force Disabled: " .. forceDisabled)
 
     -- Wait before updating again
