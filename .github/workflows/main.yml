@@ -10,13 +10,14 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Install Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '16'
-
-      - name: Install rcon-cli
-        run: npm install -g rcon-cli
+      - name: Install mcrcon
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git build-essential
+          git clone https://github.com/Tiiffi/mcrcon.git
+          cd mcrcon
+          make
+          sudo install mcrcon /usr/local/bin
 
       - name: Send RCON Command
         env:
@@ -26,8 +27,4 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
         run: |
           SHORT_SHA="${GITHUB_SHA::7}"
-          rcon-cli \
-            --host "$RCON_HOST" \
-            --port "$RCON_PORT" \
-            --password "$RCON_PASSWORD" \
-            say "[ThexOS] Update Available: $SHORT_SHA"
+          mcrcon -H "$RCON_HOST" -P "$RCON_PORT" -p "$RCON_PASSWORD" "say [ThexOS] Update Available: $SHORT_SHA"
