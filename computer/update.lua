@@ -72,6 +72,4 @@ if fs.exists("startup.lua") then
 end
 downloadFile("startup.lua")
 
-print('Update complete. Rebooting in 5 seconds...')
-sleep(5)
-os.reboot()
+print('Update complete.')
