@@ -1,5 +1,5 @@
 -- update.lua
--- Update script for ComputerCraft with cache busting and commit hash display
+-- Update script for ComputerCraft using commit hash in URLs
 
 -- Configuration
 local githubUser = 'liquidthex'
@@ -7,33 +7,11 @@ local githubRepo = 'computercraft-reactor'
 local githubBranch = 'main' -- Change if using a different branch
 local folderPath = 'computer'
 
-local baseURL = 'https://raw.githubusercontent.com/' .. githubUser .. '/' .. githubRepo .. '/' .. githubBranch .. '/' .. folderPath .. '/'
-
--- Seed the random number generator
-math.randomseed(os.time())
-
--- Function to download a file with cache busting
-local function downloadFile(filePath)
-    -- Generate a cache-busting query parameter
-    local cacheBuster = '?cb=' .. math.random(1, 1000000)
-    local url = baseURL .. filePath .. cacheBuster
-
-    local response = http.get(url)
-    if response then
-        -- Create any necessary subdirectories
-        local dir = fs.getDir(filePath)
-        if dir and dir ~= '' then
-            fs.makeDir(dir)
-        end
-
-        local file = fs.open(filePath, 'w')
-        file.write(response.readAll())
-        file.close()
-        response.close()
-        print('Downloaded ' .. filePath)
-    else
-        print('Failed to download ' .. filePath)
-    end
+-- Ensure HTTP API is enabled
+if not http then
+    print('HTTP API is not enabled in ComputerCraft.')
+    print('Enable it by setting "http_enable = true" in the mod config.')
+    return
 end
 
 -- Function to get the latest commit hash from GitHub API
@@ -54,19 +32,18 @@ local function getLatestCommitHash()
     end
 end
 
--- Ensure HTTP API is enabled
-if not http then
-    print('HTTP API is not enabled in ComputerCraft.')
-    print('Enable it by setting "http_enable = true" in the mod config.')
+-- Get the latest commit hash
+local commitHash = getLatestCommitHash()
+if not commitHash then
+    print('Cannot proceed without the latest commit hash.')
     return
 end
 
--- Get the latest commit hash
-local commitHash = getLatestCommitHash()
+-- Construct the base URL using the commit hash
+local baseURL = 'https://raw.githubusercontent.com/' .. githubUser .. '/' .. githubRepo .. '/' .. commitHash .. '/' .. folderPath .. '/'
 
 -- Download files.txt to get the list of files
-local cacheBuster = '?cb=' .. math.random(1, 1000000)
-local filesTxtUrl = baseURL .. 'files.txt' .. cacheBuster
+local filesTxtUrl = baseURL .. 'files.txt'
 local response = http.get(filesTxtUrl)
 local files = {}
 
@@ -87,6 +64,27 @@ else
     return
 end
 
+-- Function to download a file
+local function downloadFile(filePath)
+    local url = baseURL .. filePath
+    local response = http.get(url)
+    if response then
+        -- Create any necessary subdirectories
+        local dir = fs.getDir(filePath)
+        if dir and dir ~= '' then
+            fs.makeDir(dir)
+        end
+
+        local file = fs.open(filePath, 'w')
+        file.write(response.readAll())
+        file.close()
+        response.close()
+        print('Downloaded ' .. filePath)
+    else
+        print('Failed to download ' .. filePath)
+    end
+end
+
 -- Download each file except startup.lua
 for _, filePath in ipairs(files) do
     if filePath ~= "startup.lua" then
@@ -101,8 +99,4 @@ end
 downloadFile("startup.lua")
 
 -- Display the commit hash in the final message
-if commitHash then
-    print('Updated to commit: ' .. commitHash)
-else
-    print('Update complete.')
-end
+print('Update complete. Updated to commit: ' .. commitHash)
