@@ -11,25 +11,7 @@ if not http then
     error('HTTP API is not enabled in ComputerCraft. Enable it by setting "http_enable = true" in the mod config.')
 end
 
--- Function to get the latest commit hash from GitHub API
-local function getLatestCommitHash()
-    local apiURL = 'https://api.github.com/repos/' .. githubUser .. '/' .. githubRepo .. '/commits/' .. githubBranch
-    local response = http.get(apiURL)
-    if not response then
-        error('Failed to retrieve the latest commit hash.')
-    end
-    local jsonResponse = response.readAll()
-    response.close()
-
-    -- Extract the commit SHA using pattern matching
-    local commitSHA = jsonResponse:match('"sha"%s*:%s*"(.-)"')
-    if not commitSHA then
-        error('Failed to parse the latest commit hash.')
-    end
-    return commitSHA
-end
-
--- Load stored commit hash
+-- Function to load stored commit hash
 local function loadStoredCommitHash()
     if fs.exists(".thexos_commit_hash") then
         local file = fs.open(".thexos_commit_hash", "r")
@@ -41,22 +23,21 @@ local function loadStoredCommitHash()
     end
 end
 
--- Save commit hash
+-- Function to save commit hash
 local function saveCommitHash(hash)
     local file = fs.open(".thexos_commit_hash", "w")
     file.write(hash)
     file.close()
 end
 
--- Main logic
-local latestHash = getLatestCommitHash()
-local storedHash = loadStoredCommitHash()
-
-if latestHash ~= storedHash then
-    -- An update is needed
+-- Function to perform the update
+local function performUpdate()
     print('Update available. Downloading update.lua and running update.')
 
-    -- Download update.lua to the root directory
+    -- Get the latest commit hash from GitHub API
+    local latestHash = getLatestCommitHash()
+
+    -- Download update.lua from the latest commit
     local updateURL = 'https://raw.githubusercontent.com/' .. githubUser .. '/' .. githubRepo .. '/' .. latestHash .. '/update.lua'
     local response = http.get(updateURL)
     if not response then
@@ -83,40 +64,83 @@ if latestHash ~= storedHash then
     -- Reboot the computer to apply updates
     print('Update complete. Rebooting...')
     os.reboot()
-else
-    print('No update needed.')
 end
 
--- After update (or if no update needed), proceed to detect peripherals and run reactorControl.lua if applicable
+-- Function to get the latest commit hash from GitHub API
+function getLatestCommitHash()
+    local apiURL = 'https://api.github.com/repos/' .. githubUser .. '/' .. githubRepo .. '/commits/' .. githubBranch
+    local response = http.get(apiURL)
+    if not response then
+        error('Failed to retrieve the latest commit hash.')
+    end
+    local jsonResponse = response.readAll()
+    response.close()
 
--- Detect connected peripherals
-local monitor = peripheral.find("monitor")
-local reactor = peripheral.find("fissionReactorLogicAdapter")
+    -- Extract the commit SHA using pattern matching
+    local commitSHA = jsonResponse:match('"sha"%s*:%s*"(.-)"')
+    if not commitSHA then
+        error('Failed to parse the latest commit hash.')
+    end
+    return commitSHA
+end
 
--- If both peripherals are present, run reactorControl.lua in the background
-if monitor and reactor then
-    if fs.exists("thexos/reactorControl.lua") then
-        if multishell then
-            -- Launch reactorControl.lua in a new tab
-            multishell.launch({}, "thexos/reactorControl.lua")
-            print("Launched reactorControl.lua in background.")
+-- Function to listen for chat messages
+local function listenForChatMessages()
+    while true do
+        local event, username, message = os.pullEvent("chat")
+
+        -- Check if the message contains the update trigger
+        if message:find("%[ThexOS%]%s+Update Available") then
+            print("Update notification received. Checking for updates...")
+            performUpdate()
+        end
+    end
+end
+
+-- Main program logic
+local function main()
+    -- Check for updates on startup
+    local latestHash = getLatestCommitHash()
+    local storedHash = loadStoredCommitHash()
+
+    if not storedHash or latestHash ~= storedHash then
+        performUpdate()
+    else
+        print('No update needed.')
+    end
+
+    -- Detect connected peripherals
+    local monitor = peripheral.find("monitor")
+    local reactor = peripheral.find("fissionReactorLogicAdapter")
+
+    -- If both peripherals are present, run reactorControl.lua
+    if monitor and reactor then
+        if fs.exists("thexos/reactorControl.lua") then
+            if multishell then
+                -- Launch reactorControl.lua in a new tab
+                multishell.launch({}, "thexos/reactorControl.lua")
+                print("Launched reactorControl.lua in background.")
+            else
+                -- Run reactorControl.lua normally
+                shell.run("thexos/reactorControl.lua")
+            end
         else
-            -- Run reactorControl.lua normally
-            shell.run("thexos/reactorControl.lua")
+            print("reactorControl.lua not found.")
         end
     else
-        print("reactorControl.lua not found.")
+        print("Monitor or reactor not detected. Skipping reactorControl.lua.")
     end
-else
-    print("Monitor or reactor not detected. Skipping reactorControl.lua.")
+
+    -- Print the contents of thexos/motd.txt upon successful startup
+    if fs.exists("thexos/motd.txt") then
+        local file = fs.open("thexos/motd.txt", "r")
+        local motd = file.readAll()
+        file.close()
+        print(motd)
+    else
+        print("motd.txt not found.")
+    end
 end
 
--- Print the contents of thexos/motd.txt upon successful startup
-if fs.exists("thexos/motd.txt") then
-    local file = fs.open("thexos/motd.txt", "r")
-    local motd = file.readAll()
-    file.close()
-    print(motd)
-else
-    print("motd.txt not found.")
-end
+-- Start listening for chat messages in parallel with the main program
+parallel.waitForAny(listenForChatMessages, main)

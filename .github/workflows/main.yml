@@ -1,0 +1,33 @@
+# .github/workflows/main.yml
+name: Notify Minecraft Server on Push
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Install rcon-cli
+        run: npm install -g rcon-cli
+
+      - name: Send RCON Command
+        env:
+          RCON_HOST: ${{ secrets.RCON_HOST }}
+          RCON_PORT: ${{ secrets.RCON_PORT }}
+          RCON_PASSWORD: ${{ secrets.RCON_PASSWORD }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          rcon-cli \
+            --host "$RCON_HOST" \
+            --port "$RCON_PORT" \
+            --password "$RCON_PASSWORD" \
+            say "[ThexOS] Update Available: $SHORT_SHA"
