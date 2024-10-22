@@ -1,11 +1,11 @@
--- thexos/update.lua
+-- update.lua
 -- Update script for ComputerCraft using GitHub API to download all files
 
 -- Configuration
 local githubUser = 'liquidthex'
 local githubRepo = 'computercraft-thexos'
-local githubBranch = 'main' -- Change if using a different branch
-local folderPath = 'computer'
+local githubBranch = 'main'  -- Change if using a different branch
+local folderPath = 'computer' -- Path to the 'computer' folder in your repo
 
 -- Ensure HTTP API is enabled
 if not http then
@@ -34,13 +34,6 @@ local function downloadFiles(path, savePath)
             -- Download the file
             local fileURL = item.download_url
             local relativePath = savePath .. '/' .. item.name
-
-            -- Adjust save paths
-            if item.name == 'startup.lua' then
-                relativePath = item.name
-            else
-                relativePath = savePath .. '/' .. item.name
-            end
 
             -- Remove leading slashes
             relativePath = relativePath:gsub('^/', '')
@@ -71,12 +64,17 @@ end
 
 -- Main update logic
 
--- Delete the thexos folder before downloading new files
-if fs.exists('thexos') then
-    fs.delete('thexos')
+-- Delete existing files before downloading new ones
+local function deleteDirectory(path)
+    if fs.exists(path) then
+        fs.delete(path)
+    end
 end
 
--- Download files starting from the 'computer/thexos' directory
+-- Delete 'thexos' directory
+deleteDirectory('thexos')
+
+-- Download files starting from the 'computer' directory
 downloadFiles(folderPath, '')
 
 print('Update complete.')

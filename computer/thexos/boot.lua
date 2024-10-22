@@ -5,7 +5,6 @@
 local githubUser = 'liquidthex'
 local githubRepo = 'computercraft-thexos'
 local githubBranch = 'main'        -- Change if using a different branch
-local folderPath = 'computer'      -- Path to the 'computer' folder in your repo
 
 -- Ensure HTTP API is enabled
 if not http then
@@ -58,7 +57,7 @@ if latestHash ~= storedHash then
     print('Update available. Downloading update.lua and running update.')
 
     -- Download update.lua to the root directory
-    local updateURL = 'https://raw.githubusercontent.com/' .. githubUser .. '/' .. githubRepo .. '/' .. latestHash .. '/' .. folderPath .. '/thexos/update.lua'
+    local updateURL = 'https://raw.githubusercontent.com/' .. githubUser .. '/' .. githubRepo .. '/' .. latestHash .. '/update.lua'
     local response = http.get(updateURL)
     if not response then
         error('Failed to download update.lua.')
