@@ -24,7 +24,7 @@ if not reactor then
 end
 
 -- Monitor setup
-monitor.setTextScale(0.5)  -- Adjust text scale as needed
+monitor.setTextScale(0.3)  -- Adjust text scale as needed
 monitor.setBackgroundColor(colors.black)
 monitor.setTextColor(colors.white)
 monitor.clear()
