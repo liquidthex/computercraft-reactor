@@ -1,2 +1,2 @@
 update.lua
-rom/motd.txt
+motd.txt
