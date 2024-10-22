@@ -99,4 +99,4 @@ end
 downloadFile("startup.lua")
 
 -- Display the commit hash in the final message
-print('Update complete. Updated to commit: ' .. commitHash)
+print('Complete! Updated to commit: ' .. commitHash)
