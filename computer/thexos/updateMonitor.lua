@@ -88,7 +88,10 @@ end
 local function listenForChatMessages()
     while true do
         local event, username, message = os.pullEvent("chat")
-
+        
+        -- Debug: Print every chat message received
+        print("Received chat message from " .. username .. ": " .. message)
+        
         -- Check if the message contains the update trigger
         if message:find("%[ThexOS%]%s+Update Available") then
             print("Update notification received. Checking for updates...")
@@ -96,6 +99,7 @@ local function listenForChatMessages()
         end
     end
 end
+
 
 -- Start listening for chat messages
 listenForChatMessages()
