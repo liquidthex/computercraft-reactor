@@ -1,5 +1,5 @@
--- thexos/boot.lua
--- Main boot script that handles updates and runs other programs
+-- thexos/updateMonitor.lua
+-- Script to monitor for update notifications and perform updates when necessary
 
 -- Configuration
 local githubUser = 'liquidthex'
@@ -9,11 +9,6 @@ local githubBranch = 'main'        -- Change if using a different branch
 -- Ensure HTTP API is enabled
 if not http then
     error('HTTP API is not enabled in ComputerCraft. Enable it by setting "http_enable = true" in the mod config.')
-end
-
--- Check if multishell is available
-if not multishell then
-    error("Multishell is required to run this program. Please use a version of ComputerCraft that supports multishell.")
 end
 
 -- Function to load stored commit hash
@@ -72,7 +67,7 @@ local function performUpdate()
 end
 
 -- Function to get the latest commit hash from GitHub API
-function getLatestCommitHash()
+local function getLatestCommitHash()
     local apiURL = 'https://api.github.com/repos/' .. githubUser .. '/' .. githubRepo .. '/commits/' .. githubBranch
     local response = http.get(apiURL)
     if not response then
@@ -89,59 +84,18 @@ function getLatestCommitHash()
     return commitSHA
 end
 
--- Function to run a script when specified peripherals are connected
-local function runOnFindPeripherals(peripheralsList, scriptPath)
-    for _, peripheralName in ipairs(peripheralsList) do
-        if not peripheral.find(peripheralName) then
-            print("Peripheral not found: " .. peripheralName .. ". Skipping " .. scriptPath)
-            return
+-- Function to listen for chat messages
+local function listenForChatMessages()
+    while true do
+        local event, username, message = os.pullEvent("chat")
+
+        -- Check if the message contains the update trigger
+        if message:find("%[ThexOS%]%s+Update Available") then
+            print("Update notification received. Checking for updates...")
+            performUpdate()
         end
     end
-
-    if fs.exists(scriptPath) then
-        -- Launch the script in a new multishell tab
-        multishell.launch({}, scriptPath)
-        print("Launched " .. scriptPath .. " in background.")
-    else
-        print("Script not found: " .. scriptPath)
-    end
 end
 
--- Main program logic
-local function main()
-    -- Check for updates on startup
-    local latestHash = getLatestCommitHash()
-    local storedHash = loadStoredCommitHash()
-
-    if not storedHash or latestHash ~= storedHash then
-        performUpdate()
-    else
-        print('No update needed.')
-    end
-
-    -- Launch scripts based on connected peripherals
-    runOnFindPeripherals({"monitor", "fissionReactorLogicAdapter"}, "thexos/reactorControl.lua")
-
-    -- Launch updateMonitor.lua in background
-    if fs.exists("thexos/updateMonitor.lua") then
-        multishell.launch({}, "thexos/updateMonitor.lua")
-        print("Launched updateMonitor.lua in background.")
-    else
-        print("updateMonitor.lua not found.")
-    end
-
-    -- Print the contents of thexos/motd.txt upon successful startup
-    if fs.exists("thexos/motd.txt") then
-        local file = fs.open("thexos/motd.txt", "r")
-        local motd = file.readAll()
-        file.close()
-        print(motd)
-    else
-        print("motd.txt not found.")
-    end
-
-    -- Main function ends here, console remains free for user input
-end
-
--- Run the main function
-main()
+-- Start listening for chat messages
+listenForChatMessages()
