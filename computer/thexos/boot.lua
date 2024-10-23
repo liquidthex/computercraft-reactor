@@ -16,6 +16,9 @@ if not multishell then
     error("Multishell is required to run this program. Please use a version of ComputerCraft that supports multishell.")
 end
 
+-- Set the computer label to "thexos"
+os.setComputerLabel("thexos")
+
 -- Function to load stored commit hash
 local function loadStoredCommitHash()
     if fs.exists(".thexos_commit_hash") then
@@ -121,14 +124,6 @@ local function main()
 
     -- Launch scripts based on connected peripherals
     runOnFindPeripherals({"monitor", "fissionReactorLogicAdapter"}, "thexos/reactorControl.lua")
-
-    -- Launch updateMonitor.lua in background
-    if fs.exists("thexos/updateMonitor.lua") then
-        multishell.launch({}, "thexos/updateMonitor.lua")
-        print("Launched updateMonitor.lua in background.")
-    else
-        print("updateMonitor.lua not found.")
-    end
 
     -- Print the contents of thexos/motd.txt upon successful startup
     if fs.exists("thexos/motd.txt") then

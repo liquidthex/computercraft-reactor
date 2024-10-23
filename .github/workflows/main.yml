@@ -19,12 +19,12 @@ jobs:
           make
           sudo install mcrcon /usr/local/bin
 
-      - name: Send RCON Command
+      - name: Send RCON Commands to Reboot Computers
         env:
           RCON_HOST: ${{ secrets.RCON_HOST }}
           RCON_PORT: ${{ secrets.RCON_PORT }}
           RCON_PASSWORD: ${{ secrets.RCON_PASSWORD }}
-          GITHUB_SHA: ${{ github.sha }}
         run: |
-          SHORT_SHA="${GITHUB_SHA::7}"
-          mcrcon -H "$RCON_HOST" -P "$RCON_PORT" -p "$RCON_PASSWORD" "say [ThexOS] Update Available: $SHORT_SHA"
+          mcrcon -H "$RCON_HOST" -P "$RCON_PORT" -p "$RCON_PASSWORD" "/computercraft shutdown @c[label=\"thexos\"]"
+          sleep 2
+          mcrcon -H "$RCON_HOST" -P "$RCON_PORT" -p "$RCON_PASSWORD" "/computercraft turn-on @c[label=\"thexos\"]"
