@@ -125,6 +125,10 @@ local function main()
     -- Launch scripts based on connected peripherals
     runOnFindPeripherals({"monitor", "fissionReactorLogicAdapter"}, "thexos/reactorControl.lua")
 
+    -- Clear the screen and reset the cursor position before printing motd
+    term.clear()
+    term.setCursorPos(1, 1)
+
     -- Print the contents of thexos/motd.txt upon successful startup
     if fs.exists("thexos/motd.txt") then
         local file = fs.open("thexos/motd.txt", "r")
