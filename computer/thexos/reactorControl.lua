@@ -11,7 +11,6 @@ local inductionPort = peripheral.find("inductionPort")
 if not inductionPort then
     print("Warning: Induction Port not found. Energy storage monitoring will be unavailable.")
 end
-print(inductionPort.getEnergyFilledPercentage())
 
 -- Find all monitors
 local monitorNames = {}
@@ -181,6 +180,19 @@ local function joulesToFE(joules)
     return mekanismEnergyHelper.joulesToFE(joules)
 end
 
+local function safeGetEnergyFilledPercentage()
+    if inductionPort and inductionPort.getEnergyFilledPercentage then
+        return inductionPort.getEnergyFilledPercentage()
+    else
+        print("Attempting to reconnect to the induction port...")
+        inductionPort = peripheral.find("inductionPort")
+        if inductionPort and inductionPort.getEnergyFilledPercentage then
+            return inductionPort.getEnergyFilledPercentage()
+        end
+    end
+    return nil  -- or some default value indicating failure
+end
+
 -- Function to get energy storage info
 local function getEnergyStorageInfo()
     if not inductionPort then
@@ -188,7 +200,7 @@ local function getEnergyStorageInfo()
         return nil
     end
     print("here4")
-    print(inductionPort.getEnergyFilledPercentage())
+    print(safeGetEnergyFilledPercentage())
     local energyFilledPercentage = inductionPort.getEnergyFilledPercentage()
     print("here5")
     local energy = inductionPort.getEnergy()
