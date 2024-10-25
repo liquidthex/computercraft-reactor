@@ -502,6 +502,7 @@ local function startDisplays()
     for name, displayType in pairs(monitorMapping) do
         local monitor = peripheral.wrap(name)
         if monitor and monitorFunctions[displayType] then
+            print("Launching " .. displayType .. " on monitor " .. name)
             displayThreads[#displayThreads + 1] = function()
                 monitorFunctions[displayType](monitor)
             end
