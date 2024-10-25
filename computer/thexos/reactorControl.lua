@@ -423,10 +423,9 @@ end
 monitorFunctions["energyStorage"] = function(monitor)
     monitor.setTextScale(0.5)
     while true do
-        monitor.clear()
-        monitor.setCursorPos(1,1)
-
         if not inductionPort then
+            monitor.clear()
+            monitor.setCursorPos(1,1)
             monitor.setTextColor(colors.red)
             monitor.write("Induction Port not connected.")
             sleep(5)
@@ -435,6 +434,8 @@ monitorFunctions["energyStorage"] = function(monitor)
 
         local energyInfo = getEnergyStorageInfo()
         if not energyInfo then
+            monitor.clear()
+            monitor.setCursorPos(1,1)
             monitor.setTextColor(colors.red)
             monitor.write("Failed to retrieve energy info.")
             sleep(5)
@@ -445,6 +446,8 @@ monitorFunctions["energyStorage"] = function(monitor)
         local barHeight = 20
         local barWidth = 4
         local filledHeight = math.floor(barHeight * energyInfo.energyFilledPercentage)
+        monitor.clear()
+        monitor.setCursorPos(1,1)
         for y = 1, barHeight do
             monitor.setCursorPos(2, barHeight - y + 2)
             if y <= filledHeight then
