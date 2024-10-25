@@ -179,6 +179,7 @@ end
 local function joulesToFE(joules)
     if not joules then
         return 0
+    end
     return mekanismEnergyHelper.joulesToFE(joules)
 end
 
