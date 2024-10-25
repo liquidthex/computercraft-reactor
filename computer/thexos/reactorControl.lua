@@ -180,18 +180,6 @@ local function joulesToFE(joules)
     return mekanismEnergyHelper.joulesToFE(joules)
 end
 
-local function safeGetEnergyFilledPercentage()
-    if inductionPort and inductionPort.getEnergyFilledPercentage then
-        local status, result = pcall(inductionPort.getEnergyFilledPercentage)
-        if status then
-            return result
-        else
-            print("Error calling getEnergyFilledPercentage: " .. tostring(result))
-        end
-    end
-    return nil
-end
-
 -- Function to get energy storage info
 local function getEnergyStorageInfo()
     if not inductionPort then
@@ -199,7 +187,7 @@ local function getEnergyStorageInfo()
         return nil
     end
     print("here4")
-    print(safeGetEnergyFilledPercentage())
+    print(inductionPort.getEnergy())
     local energyFilledPercentage = inductionPort.getEnergyFilledPercentage()
     print("here5")
     local energy = inductionPort.getEnergy()
