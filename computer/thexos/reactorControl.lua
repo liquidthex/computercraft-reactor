@@ -11,6 +11,7 @@ local inductionPort = peripheral.find("inductionPort")
 if not inductionPort then
     print("Warning: Induction Port not found. Energy storage monitoring will be unavailable.")
 end
+print(inductionPort.getEnergyFilledPercentage())
 
 -- Find all monitors
 local monitorNames = {}
