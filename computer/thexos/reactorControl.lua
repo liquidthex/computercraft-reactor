@@ -187,6 +187,7 @@ local function getEnergyStorageInfo()
         return nil
     end
     print("here4")
+    print(inductionPort)
     local energyFilledPercentage = inductionPort.getEnergyFilledPercentage()
     print("here5")
     local energy = inductionPort.getEnergy()
