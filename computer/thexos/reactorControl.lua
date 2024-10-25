@@ -182,23 +182,27 @@ end
 
 -- Function to get energy storage info
 local function getEnergyStorageInfo()
-    print("here3")
     if not inductionPort then
         print("Induction Port is not available.")
         return nil
     end
-
+    print("here4")
     local energyFilledPercentage = inductionPort.getEnergyFilledPercentage()
+    print("here5")
     local energy = inductionPort.getEnergy()
+    print("here6")
     local maxEnergy = inductionPort.getMaxEnergy()
+    print("here7")
     local lastInput = inductionPort.getLastInput()
+    print("here8")
     local lastOutput = inductionPort.getLastOutput()
-
+    print("here9")
     -- Convert Joules to FE
     energy = joulesToFE(energy)
     maxEnergy = joulesToFE(maxEnergy)
     lastInput = joulesToFE(lastInput)
     lastOutput = joulesToFE(lastOutput)
+    print("here10")
 
     -- Log values to console for debugging
     print("Energy Filled Percentage: " .. energyFilledPercentage)
