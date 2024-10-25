@@ -124,7 +124,7 @@ local function updateState()
         elseif reactor.getWasteFilledPercentage() > 0.1 then
             newState = STATE_RED
             newStatusMessage = "Waste above 10% full"
-        elseif inductionPort and inductionPort.getEnergyFilledPercentage() > 0.8 then
+        elseif inductionPort and inductionPort.getEnergyFilledPercentage and inductionPort.getEnergyFilledPercentage() > 0.8 then
             newState = STATE_RED
             newStatusMessage = "Energy storage more than 80% full"
         end
