@@ -442,6 +442,8 @@ monitorFunctions["energyStorage"] = function(monitor)
             break
         end
 
+        print("Here2")
+
         local energyInfo = getEnergyStorageInfo()
         if not energyInfo then
             monitor.setTextColor(colors.red)
@@ -450,7 +452,6 @@ monitorFunctions["energyStorage"] = function(monitor)
             break
         end
 
-        print("Here")
         -- Display energy bar
         local barHeight = 20
         local barWidth = 4
