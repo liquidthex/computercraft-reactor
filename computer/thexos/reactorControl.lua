@@ -455,7 +455,7 @@ monitorFunctions["energyStorage"] = function(monitor)
             break
         end
 
-        Display energy bar
+        --Display energy bar
         local barHeight = 20
         local barWidth = 4
         local filledHeight = math.floor(barHeight * energyInfo.energyFilledPercentage)
@@ -470,7 +470,7 @@ monitorFunctions["energyStorage"] = function(monitor)
         end
         monitor.setBackgroundColor(colors.black)
 
-        Display labels
+        --Display labels
         monitor.setCursorPos(7, 2)
         monitor.write("Energy Storage")
         monitor.setCursorPos(7, 4)
