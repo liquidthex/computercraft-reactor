@@ -183,6 +183,7 @@ end
 -- Function to get energy storage info
 local function getEnergyStorageInfo()
     if not inductionPort then
+        print("Induction Port is not available.")
         return nil
     end
 
@@ -197,6 +198,13 @@ local function getEnergyStorageInfo()
     maxEnergy = joulesToFE(maxEnergy)
     lastInput = joulesToFE(lastInput)
     lastOutput = joulesToFE(lastOutput)
+
+    -- Log values to console for debugging
+    print("Energy Filled Percentage: " .. energyFilledPercentage)
+    print("Energy: " .. energy)
+    print("Max Energy: " .. maxEnergy)
+    print("Last Input: " .. lastInput)
+    print("Last Output: " .. lastOutput)
 
     return {
         energyFilledPercentage = energyFilledPercentage,
@@ -426,8 +434,7 @@ monitorFunctions["energyStorage"] = function(monitor)
     while true do
         monitor.clear()
         monitor.setCursorPos(1,1)
-        monitor.setTextColor(colors.red)
-        monitor.write("Test")
+
         if not inductionPort then
             monitor.setTextColor(colors.red)
             monitor.write("Induction Port not connected.")
