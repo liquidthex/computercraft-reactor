@@ -450,6 +450,7 @@ monitorFunctions["energyStorage"] = function(monitor)
             break
         end
 
+        print("Here")
         -- Display energy bar
         local barHeight = 20
         local barWidth = 4
