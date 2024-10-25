@@ -422,12 +422,12 @@ end
 
 -- Display 3: Energy Storage Information
 monitorFunctions["energyStorage"] = function(monitor)
-    print("Energy storage debug")
     monitor.setTextScale(0.5)
     while true do
         monitor.clear()
         monitor.setCursorPos(1,1)
-
+        monitor.setTextColor(colors.red)
+        monitor.write("Test")
         if not inductionPort then
             monitor.setTextColor(colors.red)
             monitor.write("Induction Port not connected.")
