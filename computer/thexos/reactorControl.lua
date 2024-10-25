@@ -185,7 +185,7 @@ end
 
 -- Function to get energy storage info
 local function getEnergyStorageInfo()
-    if not inductionPort then
+    if not inductionPort or not inductionPort.getEnergyFilledPercentage then
         print("Induction Port is not available.")
         return nil
     end
@@ -427,7 +427,7 @@ end
 monitorFunctions["energyStorage"] = function(monitor)
     monitor.setTextScale(0.5)
     while true do
-        if not inductionPort or not energyInfo.energyFilledPercentage then
+        if not inductionPort then
             monitor.clear()
             monitor.setCursorPos(1,1)
             monitor.setTextColor(colors.red)
