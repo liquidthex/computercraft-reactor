@@ -187,7 +187,6 @@ local function getEnergyStorageInfo()
         return nil
     end
     print("here4")
-    print(inductionPort.getEnergy())
     local energyFilledPercentage = inductionPort.getEnergyFilledPercentage()
     print("here5")
     local energy = inductionPort.getEnergy()
@@ -435,61 +434,61 @@ monitorFunctions["automationControl"] = function(monitor)
 end
 
 -- Display 3: Energy Storage Information
-monitorFunctions["energyStorage"] = function(monitor)
-    monitor.setTextScale(0.5)
-    while true do
-        monitor.clear()
-        monitor.setCursorPos(1,1)
+-- monitorFunctions["energyStorage"] = function(monitor)
+--     monitor.setTextScale(0.5)
+--     while true do
+--         monitor.clear()
+--         monitor.setCursorPos(1,1)
 
-        if not inductionPort then
-            monitor.setTextColor(colors.red)
-            monitor.write("Induction Port not connected.")
-            sleep(5)
-            break
-        end
+--         if not inductionPort then
+--             monitor.setTextColor(colors.red)
+--             monitor.write("Induction Port not connected.")
+--             sleep(5)
+--             break
+--         end
 
-        local energyInfo = getEnergyStorageInfo()
-        if not energyInfo then
-            monitor.setTextColor(colors.red)
-            monitor.write("Failed to retrieve energy info.")
-            sleep(5)
-            break
-        end
+--         local energyInfo = getEnergyStorageInfo()
+--         if not energyInfo then
+--             monitor.setTextColor(colors.red)
+--             monitor.write("Failed to retrieve energy info.")
+--             sleep(5)
+--             break
+--         end
 
-        -- Display energy bar
-        local barHeight = 20
-        local barWidth = 4
-        local filledHeight = math.floor(barHeight * energyInfo.energyFilledPercentage)
-        for y = 1, barHeight do
-            monitor.setCursorPos(2, barHeight - y + 2)
-            if y <= filledHeight then
-                monitor.setBackgroundColor(colors.green)
-            else
-                monitor.setBackgroundColor(colors.gray)
-            end
-            monitor.write(string.rep(" ", barWidth))
-        end
-        monitor.setBackgroundColor(colors.black)
+--         Display energy bar
+--         local barHeight = 20
+--         local barWidth = 4
+--         local filledHeight = math.floor(barHeight * energyInfo.energyFilledPercentage)
+--         for y = 1, barHeight do
+--             monitor.setCursorPos(2, barHeight - y + 2)
+--             if y <= filledHeight then
+--                 monitor.setBackgroundColor(colors.green)
+--             else
+--                 monitor.setBackgroundColor(colors.gray)
+--             end
+--             monitor.write(string.rep(" ", barWidth))
+--         end
+--         monitor.setBackgroundColor(colors.black)
 
-        -- Display labels
-        monitor.setCursorPos(7, 2)
-        monitor.write("Energy Storage")
-        monitor.setCursorPos(7, 4)
-        monitor.write("Level: " .. string.format("%.2f%%", energyInfo.energyFilledPercentage * 100))
+--         Display labels
+--         monitor.setCursorPos(7, 2)
+--         monitor.write("Energy Storage")
+--         monitor.setCursorPos(7, 4)
+--         monitor.write("Level: " .. string.format("%.2f%%", energyInfo.energyFilledPercentage * 100))
 
-        monitor.setCursorPos(7, 6)
-        monitor.write("Input: " .. formatLargeNumber(energyInfo.lastInput) .. " FE/t")
-        monitor.setCursorPos(7, 7)
-        monitor.write("Output: " .. formatLargeNumber(energyInfo.lastOutput) .. " FE/t")
+--         monitor.setCursorPos(7, 6)
+--         monitor.write("Input: " .. formatLargeNumber(energyInfo.lastInput) .. " FE/t")
+--         monitor.setCursorPos(7, 7)
+--         monitor.write("Output: " .. formatLargeNumber(energyInfo.lastOutput) .. " FE/t")
 
-        monitor.setCursorPos(7, 9)
-        monitor.write("Total: " .. formatLargeNumber(energyInfo.energy) .. " FE")
-        monitor.setCursorPos(7, 10)
-        monitor.write("Capacity: " .. formatLargeNumber(energyInfo.maxEnergy) .. " FE")
+--         monitor.setCursorPos(7, 9)
+--         monitor.write("Total: " .. formatLargeNumber(energyInfo.energy) .. " FE")
+--         monitor.setCursorPos(7, 10)
+--         monitor.write("Capacity: " .. formatLargeNumber(energyInfo.maxEnergy) .. " FE")
 
-        sleep(1)
-    end
-end
+--         sleep(1)
+--     end
+-- end
 
 -- Display 4: Event Log
 monitorFunctions["eventLog"] = function(monitor)
