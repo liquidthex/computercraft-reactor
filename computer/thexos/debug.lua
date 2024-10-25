@@ -11,20 +11,16 @@ local function thexosDebug(func)
             oldOutput.write(output)
             file.write(output)
         end,
-        getCursorPos = function()
-            return oldOutput.getCursorPos()
-        end,
-        setCursorPos = function(_, x, y)
-            oldOutput.setCursorPos(x, y)
-        end,
+        getCursorPos = oldOutput.getCursorPos,
+        setCursorPos = oldOutput.setCursorPos,
         clear = oldOutput.clear,
         clearLine = oldOutput.clearLine,
         scroll = oldOutput.scroll,
-        getSize = oldOutput.getSize
+        getSize = oldOutput.getSize,
     }
 
-    -- Check if the terminal supports colors and add color methods conditionally
-    if oldOutput.isColor and oldOutput.isColor() then
+    -- Ensure color methods are only added if they exist in the old output
+    if type(oldOutput.isColor) == "function" and oldOutput.isColor() then
         newOutput.isColor = oldOutput.isColor
         newOutput.setTextColor = oldOutput.setTextColor
         newOutput.setTextColour = oldOutput.setTextColour
