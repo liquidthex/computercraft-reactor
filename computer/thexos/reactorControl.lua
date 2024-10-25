@@ -182,6 +182,7 @@ end
 
 -- Function to get energy storage info
 local function getEnergyStorageInfo()
+    print("here3")
     if not inductionPort then
         print("Induction Port is not available.")
         return nil
@@ -441,8 +442,6 @@ monitorFunctions["energyStorage"] = function(monitor)
             sleep(5)
             break
         end
-
-        print("Here2")
 
         local energyInfo = getEnergyStorageInfo()
         if not energyInfo then
