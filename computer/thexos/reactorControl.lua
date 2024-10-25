@@ -427,7 +427,7 @@ end
 monitorFunctions["energyStorage"] = function(monitor)
     monitor.setTextScale(0.5)
     while true do
-        if not inductionPort then
+        if not inductionPort or not energyInfo.energyFilledPercentage then
             monitor.clear()
             monitor.setCursorPos(1,1)
             monitor.setTextColor(colors.red)
