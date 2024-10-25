@@ -181,17 +181,15 @@ local function joulesToFE(joules)
 end
 
 local function safeGetEnergyFilledPercentage()
-    inductionPort = peripheral.find("inductionPort")
     if inductionPort and inductionPort.getEnergyFilledPercentage then
-        return inductionPort.getEnergyFilledPercentage()
-    else
-        print("Attempting to reconnect to the induction port...")
-        inductionPort = peripheral.find("inductionPort")
-        if inductionPort and inductionPort.getEnergyFilledPercentage then
-            return inductionPort.getEnergyFilledPercentage()
+        local status, result = pcall(inductionPort.getEnergyFilledPercentage)
+        if status then
+            return result
+        else
+            print("Error calling getEnergyFilledPercentage: " .. tostring(result))
         end
     end
-    return nil  -- or some default value indicating failure
+    return nil
 end
 
 -- Function to get energy storage info
