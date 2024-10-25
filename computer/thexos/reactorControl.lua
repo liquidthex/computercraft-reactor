@@ -7,10 +7,10 @@ if not reactor then
     error("Fission Reactor Logic Adapter not found!")
 end
 
-local inductionPort = peripheral.find("inductionPort")
-if not inductionPort then
-    print("Warning: Induction Port not found. Energy storage monitoring will be unavailable.")
-end
+-- local inductionPort = peripheral.find("inductionPort")
+-- if not inductionPort then
+--     print("Warning: Induction Port not found. Energy storage monitoring will be unavailable.")
+-- end
 
 -- Find all monitors
 local monitorNames = {}
@@ -124,7 +124,7 @@ local function updateState()
         elseif reactor.getWasteFilledPercentage() > 0.1 then
             newState = STATE_RED
             newStatusMessage = "Waste above 10% full"
-        elseif inductionPort and inductionPort.getEnergyFilledPercentage() > 0.8 then
+        elseif peripheral.find("inductionPort") and peripheral.find("inductionPort").getEnergyFilledPercentage() > 0.8 then
             newState = STATE_RED
             newStatusMessage = "Energy storage more than 80% full"
         end
@@ -132,7 +132,7 @@ local function updateState()
 
     -- Check yellow conditions (only if green)
     if newState == STATE_GREEN then
-        if not inductionPort then
+        if not peripheral.find("inductionPort") then
             newState = STATE_YELLOW
             newStatusMessage = "No response from energy storage modem"
         elseif reactor.getFuelFilledPercentage() < 1.0 then
@@ -182,20 +182,20 @@ end
 
 -- Function to get energy storage info
 local function getEnergyStorageInfo()
-    if not inductionPort then
+    if not peripheral.find("inductionPort") then
         print("Induction Port is not available.")
         return nil
     end
     print("here4")
-    local energyFilledPercentage = inductionPort.getEnergyFilledPercentage()
+    local energyFilledPercentage = peripheral.find("inductionPort").getEnergyFilledPercentage()
     print("here5")
-    local energy = inductionPort.getEnergy()
+    local energy = peripheral.find("inductionPort").getEnergy()
     print("here6")
-    local maxEnergy = inductionPort.getMaxEnergy()
+    local maxEnergy = inductiperipheral.find("inductionPort")onPort.getMaxEnergy()
     print("here7")
-    local lastInput = inductionPort.getLastInput()
+    local lastInput = peripheral.find("inductionPort").getLastInput()
     print("here8")
-    local lastOutput = inductionPort.getLastOutput()
+    local lastOutput = peripheral.find("inductionPort").getLastOutput()
     print("here9")
     -- Convert Joules to FE
     energy = joulesToFE(energy)
@@ -440,7 +440,7 @@ monitorFunctions["energyStorage"] = function(monitor)
         monitor.clear()
         monitor.setCursorPos(1,1)
 
-        if not inductionPort then
+        if not peripheral.find("inductionPort") then
             monitor.setTextColor(colors.red)
             monitor.write("Induction Port not connected.")
             sleep(5)
