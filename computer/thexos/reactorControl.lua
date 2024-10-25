@@ -511,41 +511,32 @@ end
 
 -- Function to start display functions in parallel
 local function startDisplays()
-    local displayThreads = {}
+    local displayTasks = {}
     for name, displayType in pairs(monitorMapping) do
         local monitor = peripheral.wrap(name)
         if monitor and monitorFunctions[displayType] then
             print("Launching " .. displayType .. " on monitor " .. name)
-            displayThreads[#displayThreads + 1] = function()
+            table.insert(displayTasks, function()
                 monitorFunctions[displayType](monitor)
-            end
+            end)
         else
             print("Monitor " .. name .. " has unknown display type: " .. displayType)
         end
     end
     -- Start all displays in parallel
-    parallel.waitForAll(table.unpack(displayThreads))
+    parallel.waitForAll(table.unpack(displayTasks))
 end
 
 -- Main function
 local function main()
-    -- Start displays in background
-    print(peripheral.find("inductionPort").getEnergyFilledPercentage())
-    local displayThread = coroutine.create(startDisplays)
-
-    -- Main loop
-    while true do
-        updateState()
-        controlReactor()
-        sleep(1)
-        -- Resume display thread if needed
-        if coroutine.status(displayThread) == "suspended" then
-            local ok, err = coroutine.resume(displayThread)
-            if not ok then
-                print("Error in coroutine:", err)
-            end
+    -- Start displays in parallel and manage the reactor state in the same loop
+    parallel.waitForAll(startDisplays, function()
+        while true do
+            updateState()
+            controlReactor()
+            sleep(1)
         end
-    end
+    end)
 end
 
 -- Auto-restart logic
