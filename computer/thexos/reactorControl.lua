@@ -223,9 +223,6 @@ local monitorFunctions = {}
 -- Display 1: Reactor Status Display
 monitorFunctions["reactorStatus"] = function(monitor)
     while true do
-        monitor.clear()
-        monitor.setCursorPos(1,1)
-        monitor.setTextScale(0.5)
         local width, height = monitor.getSize()
 
         -- Get reactor status
@@ -239,6 +236,10 @@ monitorFunctions["reactorStatus"] = function(monitor)
         local burnRate = reactor.getBurnRate()
         local actualBurnRate = reactor.getActualBurnRate()
         local maxBurnRate = reactor.getMaxBurnRate()
+
+        monitor.clear()
+        monitor.setCursorPos(1,1)
+        monitor.setTextScale(0.5)
 
         -- Display reactor information
         monitor.setTextColor(colors.yellow)
