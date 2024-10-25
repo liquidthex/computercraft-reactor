@@ -422,6 +422,7 @@ end
 
 -- Display 3: Energy Storage Information
 monitorFunctions["energyStorage"] = function(monitor)
+    print("Energy storage debug")
     monitor.setTextScale(0.5)
     while true do
         monitor.clear()
