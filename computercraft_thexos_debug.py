@@ -1,33 +1,23 @@
-# computercraft_thexos_debug.py
-import sys
 import asyncio
 import websockets
 
-async def command_prompt(uri):
-    async with websockets.connect(uri) as websocket:
-        print("Connected to ComputerCraft debug server.")
-        print("Type 'exit' to quit.")
-
+async def server(websocket, path):
+    print("Connection established.")
+    try:
         while True:
-            command = input(">>> ")
-            if command.lower() == 'exit':
-                print("Exiting...")
+            # Accept command input from the console
+            command = input("Enter command: ")
+            if command:
+                await websocket.send(command)
+                response = await websocket.recv()
+                print("Response:", response)
+            else:
+                print("Empty command, connection closing...")
                 break
-            
-            # Send the command over WebSocket
-            await websocket.send(command)
-            
-            # Wait for and print the response
-            response = await websocket.recv()
-            print(response)
+    except websockets.exceptions.ConnectionClosed:
+        print("Connection closed.")
 
-async def main():
-    if len(sys.argv) < 2:
-        print("Usage: python computercraft_thexos_debug.py ws://<Minecraft_Computer_IP>:<port>")
-        sys.exit(1)
-    
-    uri = sys.argv[1]
-    await command_prompt(uri)
+start_server = websockets.serve(server, "127.0.0.1", 8000)
 
-if __name__ == "__main__":
-    asyncio.run(main())
+asyncio.get_event_loop().run_until_complete(start_server)
+asyncio.get_event_loop().run_forever()
