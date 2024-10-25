@@ -7,7 +7,7 @@ if not reactor then
     error("Fission Reactor Logic Adapter not found!")
 end
 
-inductionPort = peripheral.find("inductionPort")
+local inductionPort = peripheral.find("inductionPort")
 if not inductionPort then
     print("Warning: Induction Port not found. Energy storage monitoring will be unavailable.")
 end
@@ -181,6 +181,7 @@ local function joulesToFE(joules)
 end
 
 local function safeGetEnergyFilledPercentage()
+    inductionPort = peripheral.find("inductionPort")
     if inductionPort and inductionPort.getEnergyFilledPercentage then
         return inductionPort.getEnergyFilledPercentage()
     else
