@@ -177,6 +177,8 @@ end
 
 -- Function to convert Joules to FE (Forge Energy)
 local function joulesToFE(joules)
+    if not joules
+        return 0
     return mekanismEnergyHelper.joulesToFE(joules)
 end
 
