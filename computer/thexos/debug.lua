@@ -1,4 +1,4 @@
--- debug.lua
+-- thexosDebug.lua
 local function thexosDebug(func)
     -- Redirect output to both terminal and a file
     local oldOutput = term.current()
@@ -6,8 +6,10 @@ local function thexosDebug(func)
 
     local newOutput = {
         write = function(self, ...)
-            oldOutput.write(...)
-            file.write(...)
+            local args = {...}
+            local output = table.concat(args)
+            oldOutput.write(output)
+            file.write(output)
         end,
         getCursorPos = function()
             return oldOutput.getCursorPos()
@@ -18,13 +20,17 @@ local function thexosDebug(func)
         clear = oldOutput.clear,
         clearLine = oldOutput.clearLine,
         scroll = oldOutput.scroll,
-        isColor = oldOutput.isColor,
-        getSize = oldOutput.getSize,
-        setTextColor = oldOutput.setTextColor,
-        setTextColour = oldOutput.setTextColour,
-        setBackgroundColor = oldOutput.setBackgroundColor,
-        setBackgroundColour = oldOutput.setBackgroundColour,
+        getSize = oldOutput.getSize
     }
+
+    -- Check if the terminal supports colors and add color methods conditionally
+    if oldOutput.isColor and oldOutput.isColor() then
+        newOutput.isColor = oldOutput.isColor
+        newOutput.setTextColor = oldOutput.setTextColor
+        newOutput.setTextColour = oldOutput.setTextColour
+        newOutput.setBackgroundColor = oldOutput.setBackgroundColor
+        newOutput.setBackgroundColour = oldOutput.setBackgroundColour
+    end
 
     -- Set new terminal output
     term.redirect(newOutput)
