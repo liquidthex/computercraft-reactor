@@ -516,7 +516,6 @@ local function startDisplays()
         local monitor = peripheral.wrap(name)
         if monitor and monitorFunctions[displayType] then
             print("Launching " .. displayType .. " on monitor " .. name)
-            print(peripheral.find("inductionPort").getEnergyFilledPercentage())
             displayThreads[#displayThreads + 1] = function()
                 monitorFunctions[displayType](monitor)
             end
@@ -531,6 +530,7 @@ end
 -- Main function
 local function main()
     -- Start displays in background
+    print(peripheral.find("inductionPort").getEnergyFilledPercentage())
     local displayThread = coroutine.create(startDisplays)
 
     -- Main loop
