@@ -516,6 +516,7 @@ local function startDisplays()
         local monitor = peripheral.wrap(name)
         if monitor and monitorFunctions[displayType] then
             print("Launching " .. displayType .. " on monitor " .. name)
+            print(peripheral.find("inductionPort").getEnergyFilledPercentage())
             displayThreads[#displayThreads + 1] = function()
                 monitorFunctions[displayType](monitor)
             end
