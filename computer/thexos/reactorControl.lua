@@ -181,7 +181,9 @@ local function joulesToFE(joules)
 end
 
 local function safeGetEnergyFilledPercentage()
+    print("a1")
     if inductionPort and inductionPort.getEnergyFilledPercentage then
+        print("a2")
         return inductionPort.getEnergyFilledPercentage()
     else
         print("Attempting to reconnect to the induction port...")
