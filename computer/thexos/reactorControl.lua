@@ -111,7 +111,7 @@ local function updateState()
     if reactor.getDamagePercent() > 0 then
         newState = STATE_BLACK
         newStatusMessage = "Reactor damaged"
-    elseif not reactor.canRun() then
+    elseif reactor.isForceDisabled() then
         newState = STATE_BLACK
         newStatusMessage = "Reactor cannot run (e.g., out of fuel)"
     end
