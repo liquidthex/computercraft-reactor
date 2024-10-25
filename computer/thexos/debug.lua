@@ -1,4 +1,17 @@
 -- thexosDebug.lua
+local function serialize(table)
+    if type(table) == "table" then
+        local s = "{ "
+        for k,v in pairs(table) do
+            if type(k) ~= 'number' then k = '"'..k..'"' end
+            s = s .. '['..k..'] = ' .. serialize(v) .. ','
+        end
+        return s .. "} "
+    else
+        return tostring(table)
+    end
+end
+
 local function thexosDebug(func)
     -- Redirect output to both terminal and a file
     local oldOutput = term.current()
@@ -7,7 +20,7 @@ local function thexosDebug(func)
     local newOutput = {
         write = function(self, ...)
             local args = {...}
-            local output = table.concat(args)
+            local output = table.concat(args, " ")
             oldOutput.write(output)
             file.write(output)
         end,
@@ -34,9 +47,13 @@ local function thexosDebug(func)
     -- Execute the function and capture the result
     local status, result = pcall(func)
     if not status then
-        print("Error: ", result)
+        local errorOutput = "Error: " .. tostring(result)
+        print(errorOutput)
+        file.write(errorOutput)
     else
-        print("Result: ", result)
+        local output = "Result: " .. serialize(result)
+        print(output)
+        file.write(output)
     end
 
     -- Restore old terminal output and close file
