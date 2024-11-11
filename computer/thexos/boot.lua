@@ -12,9 +12,9 @@ if not http then
 end
 
 -- Check if multishell is available
-if not multishell then
-    error("Multishell is required to run this program. Please use a version of ComputerCraft that supports multishell.")
-end
+--if not multishell then
+--    error("Multishell is required to run this program. Please use a version of ComputerCraft that supports multishell.")
+--end
 
 -- Set the computer label to "thexos"
 os.setComputerLabel("thexos")
