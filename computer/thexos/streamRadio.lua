@@ -7,19 +7,20 @@ if not speaker then
     return
 end
 
--- Replace with your server's IP address and port
-local server_ip = "localhost"
-local port = 8765
-local url = "ws://" .. server_ip .. ":" .. port
+-- Get command-line arguments
+local args = {...}
 
--- Function to read user input for stream URL
-local function getStreamURL()
-    print("Enter the radio stream URL:")
-    local stream_url = read()
-    return stream_url
+-- Check if the stream URL is provided
+if #args < 1 then
+    print("Usage: streamRadio <stream_url> [server_ip:port]")
+    return
 end
 
-local stream_url = getStreamURL()
+local stream_url = args[1]
+
+-- Use provided server_ip:port or default to localhost:8765
+local server_ip_port = args[2] or "localhost:8765"
+local url = "ws://" .. server_ip_port
 
 -- Connect to the server
 local ws, err = http.websocket(url)
