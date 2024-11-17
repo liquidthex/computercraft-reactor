@@ -1,3 +1,6 @@
+-- Import the DFPWM module
+local dfpwm = require("cc.audio.dfpwm")
+
 local speaker = peripheral.find("speaker")
 if not speaker then
     print("Speaker not found.")
@@ -34,19 +37,8 @@ print("Connected to the streaming server.")
 local audioBuffer = {}
 local BUFFER_SIZE = 10  -- Adjust buffer size as needed
 
--- Function to convert string data to a table of numbers
-local function stringToByteTable(s)
-    local t = {}
-    for i = 1, #s do
-        local byte = string.byte(s, i)
-        -- Convert unsigned byte to signed
-        if byte >= 128 then
-            byte = byte - 256
-        end
-        table.insert(t, byte)
-    end
-    return t
-end
+-- Create a DFPWM decoder
+local decoder = dfpwm.make_decoder()
 
 -- Function to play audio from the buffer
 local function playAudio()
@@ -54,9 +46,13 @@ local function playAudio()
         if #audioBuffer > 0 then
             local data = table.remove(audioBuffer, 1)
             print("Playing audio chunk")
-            local audioData = stringToByteTable(data)
+            local decoded = {}
+            decoder(decoded, data)
+
             local success, err = pcall(function()
-                speaker.playAudio(audioData, 1)  -- Play at normal volume
+                while not speaker.playAudio(decoded) do
+                    os.pullEvent("speaker_audio_empty")
+                end
             end)
             if not success then
                 print("Error playing audio:", err)
