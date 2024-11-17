@@ -40,12 +40,14 @@ local BUFFER_SIZE = 10  -- Adjust buffer size as needed
 -- Create a DFPWM decoder
 local decoder = dfpwm.make_decoder()
 
+-- Variable to control the main loop
+local running = true
+
 -- Function to play audio from the buffer
 local function playAudio()
-    while true do
+    while running do
         if #audioBuffer > 0 then
             local data = table.remove(audioBuffer, 1)
-            print("Playing audio chunk")
             -- Decode the DFPWM data
             local success, decoded_or_error = pcall(decoder, data)
             if success then
@@ -70,10 +72,9 @@ end
 
 -- Function to receive audio data
 local function receiveAudio()
-    while true do
+    while running do
         local data, err = ws.receive()
         if data then
-            print("Received data chunk")
             table.insert(audioBuffer, data)
             -- Keep buffer from growing indefinitely
             if #audioBuffer > BUFFER_SIZE then
@@ -85,13 +86,28 @@ local function receiveAudio()
             else
                 print("WebSocket closed by server.")
             end
+            running = false
             break
         end
     end
 end
 
+-- Function to handle termination (Ctrl + T)
+local function handleTerminate()
+    os.pullEvent("terminate")
+    print("Terminating...")
+    running = false
+    -- Close the WebSocket connection
+    if ws then
+        ws.close()
+    end
+end
+
 print("Starting audio playback...")
-parallel.waitForAny(playAudio, receiveAudio)
+parallel.waitForAny(playAudio, receiveAudio, handleTerminate)
 
 print("Audio playback ended.")
-ws.close()
+-- Ensure the WebSocket is closed
+if ws and not ws.isClosed() then
+    ws.close()
+end
