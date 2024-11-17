@@ -4,6 +4,7 @@ import subprocess
 import json
 
 async def handle_client(websocket, path):
+    client_addr = websocket.remote_address
     try:
         message = await websocket.recv()
         request = json.loads(message)
@@ -11,22 +12,16 @@ async def handle_client(websocket, path):
 
         if not stream_url:
             await websocket.send(json.dumps({'error': 'No stream URL provided.'}))
-            await websocket.close()
             return
 
-        client_addr = websocket.remote_address
         print(f"[{client_addr}] Client connected. Streaming: {stream_url}")
 
         # Start streaming the audio to the client
         await stream_audio(websocket, stream_url, client_addr)
     except websockets.exceptions.ConnectionClosed:
-        print(f"[{client_addr}] Connection closed.")
+        print(f"[{client_addr}] Connection closed during initial handshake.")
     except Exception as e:
-        print(f"[{client_addr}] Error: {e}")
-    finally:
-        if not websocket.closed:
-            await websocket.close()
-        print(f"[{client_addr}] Cleaned up client connection.")
+        print(f"[{client_addr}] Error during initial handshake: {e}")
 
 async def stream_audio(websocket, stream_url, client_addr):
     ffmpeg_cmd = [
@@ -51,11 +46,13 @@ async def stream_audio(websocket, stream_url, client_addr):
             # Read DFPWM data from FFmpeg asynchronously
             dfpwm_data = await ffmpeg_proc.stdout.read(4096)
             if not dfpwm_data:
-                # Check for FFmpeg errors
-                stderr_output = await ffmpeg_proc.stderr.read()
-                stderr_output = stderr_output.decode()
-                if stderr_output:
-                    print(f"[{client_addr}] FFmpeg error: {stderr_output}")
+                # FFmpeg has no more data to send
+                print(f"[{client_addr}] FFmpeg has no more data.")
+                break
+
+            # Check if the websocket is still open before sending
+            if websocket.closed:
+                print(f"[{client_addr}] WebSocket closed unexpectedly.")
                 break
 
             # Send the DFPWM data over the WebSocket
@@ -66,9 +63,15 @@ async def stream_audio(websocket, stream_url, client_addr):
         print(f"[{client_addr}] Streaming error: {e}")
     finally:
         # Terminate the FFmpeg process
-        ffmpeg_proc.kill()
-        await ffmpeg_proc.wait()
-        print(f"[{client_addr}] FFmpeg process terminated.")
+        if ffmpeg_proc.returncode is None:
+            ffmpeg_proc.kill()
+            await ffmpeg_proc.wait()
+            print(f"[{client_addr}] FFmpeg process terminated.")
+
+        # Close the WebSocket if it's still open
+        if not websocket.closed:
+            await websocket.close()
+            print(f"[{client_addr}] WebSocket closed.")
 
 async def main():
     print("Streaming server started on port 8765.")
