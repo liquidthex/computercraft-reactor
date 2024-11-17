@@ -46,16 +46,21 @@ local function playAudio()
         if #audioBuffer > 0 then
             local data = table.remove(audioBuffer, 1)
             print("Playing audio chunk")
-            local decoded = {}
-            decoder(decoded, data)
-
-            local success, err = pcall(function()
-                while not speaker.playAudio(decoded) do
-                    os.pullEvent("speaker_audio_empty")
+            -- Decode the DFPWM data
+            local success, decoded_or_error = pcall(decoder, data)
+            if success then
+                local decoded = decoded_or_error
+                -- Play the decoded audio
+                local play_success, play_err = pcall(function()
+                    while not speaker.playAudio(decoded) do
+                        os.pullEvent("speaker_audio_empty")
+                    end
+                end)
+                if not play_success then
+                    print("Error playing audio:", play_err)
                 end
-            end)
-            if not success then
-                print("Error playing audio:", err)
+            else
+                print("Error decoding audio:", decoded_or_error)
             end
         else
             os.sleep(0.05)
