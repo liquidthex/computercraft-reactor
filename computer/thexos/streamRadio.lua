@@ -5,7 +5,7 @@ if not speaker then
 end
 
 -- Replace with your server's IP address and port
-local server_ip = "your_server_ip"
+local server_ip = "localhost"
 local port = 8765
 local url = "ws://" .. server_ip .. ":" .. port
 
