@@ -39,7 +39,13 @@ local function playAudio()
     while true do
         if #audioBuffer > 0 then
             local data = table.remove(audioBuffer, 1)
-            speaker.playAudio(data, 1)  -- Play at normal volume
+            print("Playing audio chunk")
+            local success, err = pcall(function()
+                speaker.playAudio(data, 1)  -- Play at normal volume
+            end)
+            if not success then
+                print("Error playing audio:", err)
+            end
         else
             os.sleep(0.05)
         end
@@ -49,19 +55,27 @@ end
 -- Function to receive audio data
 local function receiveAudio()
     while true do
-        local data = ws.receive()
+        local data, err = ws.receive()
         if data then
+            print("Received data chunk")
             table.insert(audioBuffer, data)
             -- Keep buffer from growing indefinitely
             if #audioBuffer > BUFFER_SIZE then
                 table.remove(audioBuffer, 1)
             end
         else
+            if err then
+                print("WebSocket receive error:", err)
+            else
+                print("WebSocket closed by server.")
+            end
             break
         end
     end
 end
 
+print("Starting audio playback...")
 parallel.waitForAny(playAudio, receiveAudio)
 
+print("Audio playback ended.")
 ws.close()
