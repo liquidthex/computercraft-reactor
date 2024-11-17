@@ -1,7 +1,6 @@
 import asyncio
 import websockets
 import subprocess
-import threading
 import json
 
 async def handle_client(websocket, path):
@@ -15,57 +14,66 @@ async def handle_client(websocket, path):
             await websocket.close()
             return
 
-        print(f"Client connected. Streaming: {stream_url}")
+        client_addr = websocket.remote_address
+        print(f"[{client_addr}] Client connected. Streaming: {stream_url}")
 
         # Start streaming the audio to the client
-        await stream_audio(websocket, stream_url)
+        await stream_audio(websocket, stream_url, client_addr)
     except websockets.exceptions.ConnectionClosed:
-        print("Connection closed.")
+        print(f"[{client_addr}] Connection closed.")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"[{client_addr}] Error: {e}")
+    finally:
+        if not websocket.closed:
+            await websocket.close()
+        print(f"[{client_addr}] Cleaned up client connection.")
 
-async def stream_audio(websocket, stream_url):
+async def stream_audio(websocket, stream_url, client_addr):
     ffmpeg_cmd = [
         'ffmpeg',
         '-i', stream_url,
-        '-f', 'dfpwm',      # Output format DFPWM1
-        '-ar', '48000',      # Sample rate
-        '-ac', '1',          # Mono audio
-        '-vn',               # No video
-        'pipe:1'             # Output to stdout
+        '-f', 'dfpwm',        # Output format
+        '-ar', '48000',       # Sample rate
+        '-ac', '1',           # Mono audio
+        '-vn',                # No video
+        'pipe:1'              # Output to stdout
     ]
 
-    # Start the FFmpeg process with stderr captured
-    ffmpeg_proc = subprocess.Popen(ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # Start the FFmpeg process asynchronously
+    ffmpeg_proc = await asyncio.create_subprocess_exec(
+        *ffmpeg_cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
 
     try:
         while True:
-            # Read DFPWM data from FFmpeg
-            dfpwm_data = ffmpeg_proc.stdout.read(4096)
+            # Read DFPWM data from FFmpeg asynchronously
+            dfpwm_data = await ffmpeg_proc.stdout.read(4096)
             if not dfpwm_data:
-                # Read FFmpeg stderr
-                stderr_output = ffmpeg_proc.stderr.read().decode()
+                # Check for FFmpeg errors
+                stderr_output = await ffmpeg_proc.stderr.read()
+                stderr_output = stderr_output.decode()
                 if stderr_output:
-                    print(f"FFmpeg error: {stderr_output}")
+                    print(f"[{client_addr}] FFmpeg error: {stderr_output}")
                 break
 
             # Send the DFPWM data over the WebSocket
             await websocket.send(dfpwm_data)
     except websockets.exceptions.ConnectionClosed:
-        print("Client disconnected.")
+        print(f"[{client_addr}] Client disconnected.")
     except Exception as e:
-        print(f"Streaming error: {e}")
+        print(f"[{client_addr}] Streaming error: {e}")
     finally:
+        # Terminate the FFmpeg process
         ffmpeg_proc.kill()
+        await ffmpeg_proc.wait()
+        print(f"[{client_addr}] FFmpeg process terminated.")
 
-def start_server():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    server = websockets.serve(handle_client, '0.0.0.0', 8765)
-
-    loop.run_until_complete(server)
+async def main():
     print("Streaming server started on port 8765.")
-    loop.run_forever()
+    async with websockets.serve(handle_client, '0.0.0.0', 8765):
+        await asyncio.Future()  # Run forever
 
 if __name__ == "__main__":
-    start_server()
+    asyncio.run(main())
