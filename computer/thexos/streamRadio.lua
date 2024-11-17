@@ -5,7 +5,7 @@ if not speaker then
 end
 
 -- Replace with your server's IP address and port
-local server_ip = "localhost"
+local server_ip = "your_server_ip"
 local port = 8765
 local url = "ws://" .. server_ip .. ":" .. port
 
@@ -34,14 +34,29 @@ print("Connected to the streaming server.")
 local audioBuffer = {}
 local BUFFER_SIZE = 10  -- Adjust buffer size as needed
 
+-- Function to convert string data to a table of numbers
+local function stringToByteTable(s)
+    local t = {}
+    for i = 1, #s do
+        local byte = string.byte(s, i)
+        -- Convert unsigned byte to signed
+        if byte >= 128 then
+            byte = byte - 256
+        end
+        table.insert(t, byte)
+    end
+    return t
+end
+
 -- Function to play audio from the buffer
 local function playAudio()
     while true do
         if #audioBuffer > 0 then
             local data = table.remove(audioBuffer, 1)
             print("Playing audio chunk")
+            local audioData = stringToByteTable(data)
             local success, err = pcall(function()
-                speaker.playAudio(data, 1)  -- Play at normal volume
+                speaker.playAudio(audioData, 1)  -- Play at normal volume
             end)
             if not success then
                 print("Error playing audio:", err)
