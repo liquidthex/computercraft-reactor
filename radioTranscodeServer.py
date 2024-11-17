@@ -33,7 +33,7 @@ async def stream_audio(websocket, stream_url):
     ffmpeg_cmd = [
         'ffmpeg',
         '-i', stream_url,
-        '-f', 'dfpwm1',      # Output format DFPWM1
+        '-f', 'dfpwm',      # Output format DFPWM1
         '-ar', '48000',      # Sample rate
         '-ac', '1',          # Mono audio
         '-vn',               # No video
