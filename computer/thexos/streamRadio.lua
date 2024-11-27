@@ -1,9 +1,10 @@
 -- Import the DFPWM module
 local dfpwm = require("cc.audio.dfpwm")
 
-local speaker = peripheral.find("speaker")
-if not speaker then
-    print("Speaker not found.")
+-- Find all speakers
+local speakers = { peripheral.find("speaker") }
+if #speakers == 0 then
+    print("No speakers found.")
     return
 end
 
@@ -44,6 +45,24 @@ local decoder = dfpwm.make_decoder()
 -- Variable to control the main loop
 local running = true
 
+-- Function to play audio to all speakers
+local function playToSpeakers(data)
+    local pending = {}
+    for _, speaker in ipairs(speakers) do
+        pending[speaker] = data
+    end
+    while next(pending) do
+        for speaker, data in pairs(pending) do
+            if speaker.playAudio(data) then
+                pending[speaker] = nil
+            end
+        end
+        if next(pending) then
+            os.pullEvent("speaker_audio_empty")
+        end
+    end
+end
+
 -- Function to play audio from the buffer
 local function playAudio()
     while running do
@@ -55,9 +74,7 @@ local function playAudio()
                 local decoded = decoded_or_error
                 -- Play the decoded audio
                 local play_success, play_err = pcall(function()
-                    while not speaker.playAudio(decoded) do
-                        os.pullEvent("speaker_audio_empty")
-                    end
+                    playToSpeakers(decoded)
                 end)
                 if not play_success then
                     print("Error playing audio:", play_err)
