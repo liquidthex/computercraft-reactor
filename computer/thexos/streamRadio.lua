@@ -45,25 +45,7 @@ local decoder = dfpwm.make_decoder()
 -- Variable to control the main loop
 local running = true
 
--- Function to play audio to all speakers
-local function playToSpeakers(data)
-    local pending = {}
-    for _, speaker in ipairs(speakers) do
-        pending[speaker] = data
-    end
-    while next(pending) do
-        for speaker, data in pairs(pending) do
-            if speaker.playAudio(data) then
-                pending[speaker] = nil
-            end
-        end
-        if next(pending) then
-            os.pullEvent("speaker_audio_empty")
-        end
-    end
-end
-
--- Function to play audio from the buffer
+-- Function to play audio to all speakers with synchronization
 local function playAudio()
     while running do
         if #audioBuffer > 0 then
@@ -72,12 +54,29 @@ local function playAudio()
             local success, decoded_or_error = pcall(decoder, data)
             if success then
                 local decoded = decoded_or_error
-                -- Play the decoded audio
-                local play_success, play_err = pcall(function()
-                    playToSpeakers(decoded)
-                end)
-                if not play_success then
-                    print("Error playing audio:", play_err)
+                -- Break the decoded data into small chunks
+                local chunkSize = 8192  -- Adjust chunk size as needed
+                local dataLength = #decoded
+                for i = 1, dataLength, chunkSize do
+                    local chunk = decoded:sub(i, i + chunkSize - 1)
+                    -- Wait until all speakers are ready
+                    local allSpeakersReady = false
+                    while not allSpeakersReady do
+                        allSpeakersReady = true
+                        for _, speaker in ipairs(speakers) do
+                            if speaker.getAudioBufferSize() > 0.1 then
+                                allSpeakersReady = false
+                                break
+                            end
+                        end
+                        if not allSpeakersReady then
+                            os.pullEvent("speaker_audio_empty")
+                        end
+                    end
+                    -- Now play the chunk to all speakers
+                    for _, speaker in ipairs(speakers) do
+                        speaker.playAudio(chunk)
+                    end
                 end
             else
                 print("Error decoding audio:", decoded_or_error)
@@ -119,6 +118,10 @@ local function handleTerminate()
     if ws then
         ws.close()
     end
+    -- Stop all speakers
+    for _, speaker in ipairs(speakers) do
+        speaker.stop()
+    end
 end
 
 print("Starting audio playback...")
@@ -128,4 +131,8 @@ print("Audio playback ended.")
 -- Ensure the WebSocket is closed
 if ws and not ws.isClosed() then
     ws.close()
+end
+-- Stop all speakers
+for _, speaker in ipairs(speakers) do
+    speaker.stop()
 end
