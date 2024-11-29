@@ -1,13 +1,9 @@
 -- Import the DFPWM module
 local dfpwm = require("cc.audio.dfpwm")
 
--- Find all speakers and their peripheral names
-local speakers = {}
-peripheral.find("speaker", function(name, object)
-    speakers[name] = object
-end)
-
-if next(speakers) == nil then
+-- Find all speakers
+local speakers = { peripheral.find("speaker") }
+if #speakers == 0 then
     print("No speakers found.")
     return
 end
@@ -49,15 +45,25 @@ local decoder = dfpwm.make_decoder()
 -- Variable to control the main loop
 local running = true
 
--- Table to keep track of which speakers are ready
-local speakersReady = {}
-
--- Initialize speakersReady table
-for name in pairs(speakers) do
-    speakersReady[name] = true  -- Start with true since all speakers are initially ready
+-- Function to play audio to all speakers
+local function playToSpeakers(data)
+    local pending = {}
+    for _, speaker in ipairs(speakers) do
+        pending[speaker] = data
+    end
+    while next(pending) do
+        for speaker, data in pairs(pending) do
+            if speaker.playAudio(data) then
+                pending[speaker] = nil
+            end
+        end
+        if next(pending) then
+            os.pullEvent("speaker_audio_empty")
+        end
+    end
 end
 
--- Function to play audio to all speakers with synchronization
+-- Function to play audio from the buffer
 local function playAudio()
     while running do
         if #audioBuffer > 0 then
@@ -66,48 +72,12 @@ local function playAudio()
             local success, decoded_or_error = pcall(decoder, data)
             if success then
                 local decoded = decoded_or_error
-                -- Ensure decoded data is a table of samples
-                if type(decoded) == "string" then
-                    -- Convert string to table of samples
-                    local samples = {}
-                    for i = 1, #decoded do
-                        local byte = string.byte(decoded, i)
-                        -- Map byte value [0, 255] to sample [-1.0, 1.0]
-                        local sample = (byte - 127.5) / 127.5
-                        samples[i] = sample
-                    end
-                    decoded = samples
-                elseif type(decoded) ~= "table" then
-                    print("Decoded data is not a table or string. Type:", type(decoded))
-                    running = false
-                    break
-                end
-
-                -- Wait until all speakers are ready
-                local allSpeakersReady = false
-                while not allSpeakersReady do
-                    allSpeakersReady = true
-                    for name, ready in pairs(speakersReady) do
-                        if not ready then
-                            allSpeakersReady = false
-                            break
-                        end
-                    end
-                    if not allSpeakersReady then
-                        os.pullEvent("speaker_audio_empty")
-                    end
-                end
-
-                -- Play the decoded audio to all speakers
-                for name, speaker in pairs(speakers) do
-                    local play_success, play_err = pcall(function()
-                        speaker.playAudio(decoded)
-                    end)
-                    if not play_success then
-                        print("Error playing audio on speaker", name, ":", play_err)
-                    end
-                    -- Mark the speaker as not ready
-                    speakersReady[name] = false
+                -- Play the decoded audio
+                local play_success, play_err = pcall(function()
+                    playToSpeakers(decoded)
+                end)
+                if not play_success then
+                    print("Error playing audio:", play_err)
                 end
             else
                 print("Error decoding audio:", decoded_or_error)
@@ -140,16 +110,6 @@ local function receiveAudio()
     end
 end
 
--- Function to handle speaker events
-local function handleSpeakerEvents()
-    while running do
-        local event, side = os.pullEvent("speaker_audio_empty")
-        if speakersReady[side] ~= nil then
-            speakersReady[side] = true
-        end
-    end
-end
-
 -- Function to handle termination (Ctrl + T)
 local function handleTerminate()
     os.pullEvent("terminate")
@@ -159,21 +119,13 @@ local function handleTerminate()
     if ws then
         ws.close()
     end
-    -- Stop all speakers
-    for _, speaker in pairs(speakers) do
-        speaker.stop()
-    end
 end
 
 print("Starting audio playback...")
-parallel.waitForAny(playAudio, receiveAudio, handleSpeakerEvents, handleTerminate)
+parallel.waitForAny(playAudio, receiveAudio, handleTerminate)
 
 print("Audio playback ended.")
 -- Ensure the WebSocket is closed
-if ws then
+if ws and not ws.isClosed() then
     ws.close()
-end
--- Stop all speakers
-for _, speaker in pairs(speakers) do
-    speaker.stop()
 end
