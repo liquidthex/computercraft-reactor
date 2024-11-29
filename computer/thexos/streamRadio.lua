@@ -59,7 +59,11 @@ local function playAudio()
                     -- Convert table of numbers to a string
                     local charTable = {}
                     for i = 1, #decoded do
-                        charTable[i] = string.char(decoded[i])
+                        -- Map the sample from [-1, 1] to [0, 255]
+                        local sample = math.floor((decoded[i] + 1) * 127.5)
+                        -- Ensure the sample is within [0, 255]
+                        sample = math.max(0, math.min(255, sample))
+                        charTable[i] = string.char(sample)
                     end
                     decoded = table.concat(charTable)
                 elseif type(decoded) ~= "string" then
