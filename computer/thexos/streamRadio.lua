@@ -66,20 +66,19 @@ local function playAudio()
             local success, decoded_or_error = pcall(decoder, data)
             if success then
                 local decoded = decoded_or_error
-                -- Convert decoded table to string if necessary
-                if type(decoded) == "table" then
-                    -- Convert table of numbers to a string
-                    local charTable = {}
+                -- Ensure decoded data is a table of samples
+                if type(decoded) == "string" then
+                    -- Convert string to table of samples
+                    local samples = {}
                     for i = 1, #decoded do
-                        -- Map the sample from [-1, 1] to [0, 255]
-                        local sample = math.floor((decoded[i] + 1) * 127.5)
-                        -- Ensure the sample is within [0, 255]
-                        sample = math.max(0, math.min(255, sample))
-                        charTable[i] = string.char(sample)
+                        local byte = string.byte(decoded, i)
+                        -- Map byte value [0, 255] to sample [-1.0, 1.0]
+                        local sample = (byte - 127.5) / 127.5
+                        samples[i] = sample
                     end
-                    decoded = table.concat(charTable)
-                elseif type(decoded) ~= "string" then
-                    print("Decoded data is not a string or table. Type:", type(decoded))
+                    decoded = samples
+                elseif type(decoded) ~= "table" then
+                    print("Decoded data is not a table or string. Type:", type(decoded))
                     running = false
                     break
                 end
