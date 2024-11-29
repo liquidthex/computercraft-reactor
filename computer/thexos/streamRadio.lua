@@ -54,11 +54,18 @@ local function playAudio()
             local success, decoded_or_error = pcall(decoder, data)
             if success then
                 local decoded = decoded_or_error
+                -- **Add a check for 'decoded' being nil or not a string**
+                if type(decoded) ~= "string" then
+                    print("Decoded data is not a string. Type:", type(decoded))
+                    print("Decoded value:", decoded)
+                    running = false
+                    break
+                end
                 -- Break the decoded data into small chunks
                 local chunkSize = 8192  -- Adjust chunk size as needed
                 local dataLength = #decoded
                 for i = 1, dataLength, chunkSize do
-                    local chunk = decoded:sub(i, i + chunkSize - 1)
+                    local chunk = string.sub(decoded, i, i + chunkSize - 1)
                     -- Wait until all speakers are ready
                     local allSpeakersReady = false
                     while not allSpeakersReady do
