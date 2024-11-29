@@ -136,7 +136,7 @@ parallel.waitForAny(playAudio, receiveAudio, handleTerminate)
 
 print("Audio playback ended.")
 -- Ensure the WebSocket is closed
-if ws and not ws.isClosed() then
+if ws then
     ws.close()
 end
 -- Stop all speakers
