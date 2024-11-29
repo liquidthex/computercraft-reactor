@@ -76,12 +76,12 @@ local function playAudio()
                 local dataLength = #decoded
                 for i = 1, dataLength, chunkSize do
                     local chunk = string.sub(decoded, i, i + chunkSize - 1)
-                    -- Wait until all speakers are ready
+                    -- Wait until all speakers have enough space
                     local allSpeakersReady = false
                     while not allSpeakersReady do
                         allSpeakersReady = true
                         for _, speaker in ipairs(speakers) do
-                            if speaker.getAudioBufferSize() > 0.1 then
+                            if speaker.getAudioSpace() < 0.1 then
                                 allSpeakersReady = false
                                 break
                             end
