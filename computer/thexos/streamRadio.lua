@@ -54,10 +54,16 @@ local function playAudio()
             local success, decoded_or_error = pcall(decoder, data)
             if success then
                 local decoded = decoded_or_error
-                -- **Add a check for 'decoded' being nil or not a string**
-                if type(decoded) ~= "string" then
-                    print("Decoded data is not a string. Type:", type(decoded))
-                    print("Decoded value:", decoded)
+                -- Convert decoded table to string if necessary
+                if type(decoded) == "table" then
+                    -- Convert table of numbers to a string
+                    local charTable = {}
+                    for i = 1, #decoded do
+                        charTable[i] = string.char(decoded[i])
+                    end
+                    decoded = table.concat(charTable)
+                elseif type(decoded) ~= "string" then
+                    print("Decoded data is not a string or table. Type:", type(decoded))
                     running = false
                     break
                 end
