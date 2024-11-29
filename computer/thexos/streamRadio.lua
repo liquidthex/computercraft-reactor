@@ -2,16 +2,14 @@
 local dfpwm = require("cc.audio.dfpwm")
 
 -- Find all speakers and their peripheral names
-local speakerNames = { peripheral.find("speaker") }
-if #speakerNames == 0 then
+local speakers = {}
+peripheral.find("speaker", function(name, object)
+    speakers[name] = object
+end)
+
+if next(speakers) == nil then
     print("No speakers found.")
     return
-end
-
--- Wrap each speaker peripheral
-local speakers = {}
-for i, name in ipairs(speakerNames) do
-    speakers[name] = peripheral.wrap(name)
 end
 
 -- Get command-line arguments
