@@ -47,9 +47,9 @@ local function performUpdate()
 
     -- Download update.lua from the latest commit
     local updateURL = 'https://raw.githubusercontent.com/' .. githubUser .. '/' .. githubRepo .. '/' .. latestHash .. '/update.lua'
-    local response = http.get(updateURL)
+    local response, err = http.get(updateURL)
     if not response then
-        error('Failed to download update.lua.')
+        error('Failed to download update.lua: ' .. (err or 'Unknown error'))
     end
 
     -- Save update.lua in the root directory
@@ -77,9 +77,9 @@ end
 -- Function to get the latest commit hash from GitHub API
 function getLatestCommitHash()
     local apiURL = 'https://api.github.com/repos/' .. githubUser .. '/' .. githubRepo .. '/commits/' .. githubBranch
-    local response = http.get(apiURL)
+    local response, err = http.get(apiURL)
     if not response then
-        error('Failed to retrieve the latest commit hash.')
+        error('Failed to retrieve the latest commit hash: ' .. (err or 'Unknown error'))
     end
     local jsonResponse = response.readAll()
     response.close()
