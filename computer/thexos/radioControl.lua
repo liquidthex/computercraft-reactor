@@ -24,39 +24,91 @@ local interfaceLocked = false -- Variable to lock the interface during station c
 
 -- Functions
 
-local function updateStatus(message, color)
-    monitor.setCursorPos(1, 3)
-    monitor.setTextColor(colors.white)
-    monitor.write("Status: ")
-    monitor.setTextColor(color or colors.white)
-    monitor.write(message .. "                  ") -- Clear any leftover text
-    monitor.setTextColor(colors.white)
+-- ASCII Art for "STEREO"
+local stereoArt = {
+" (           (    (       )   ",
+" )\\ )   (    )\\ ) )\\ ) ( /(   ",
+"(()/(   )\\  (()/((()/( )\\())  ",
+" /(_)|(((_)( /(_))/(_)|(_)\\   ",
+"(_))  )\\ _ )(_))_(_))   ((_)  ",
+"| _ \\ (_)_\\(_)   \\_ _| / _ \\  ",
+"|   /  / _ \\ | |) | | | (_) | ",
+"|_|_\\ /_/ \\_\\|___/___| \\___/  ",
+}
+
+local function centerText(y, text)
+    local x = math.floor((monWidth - #text) / 2) + 1
+    monitor.setCursorPos(x, y)
+    monitor.write(text)
 end
 
 local function drawInterface()
     monitor.clear()
-    monitor.setCursorPos(1, 1)
     monitor.setTextColor(colors.white)
-    monitor.write("=== Radio Control ===")
-    -- Update the status
-    if isPlaying then
-        updateStatus("Playing - " .. currentStation.name, colors.green)
-    elseif interfaceLocked then
-        updateStatus("Changing Stations...", colors.yellow)
-    else
-        updateStatus("Stopped", colors.red)
+    -- Draw the ASCII art centered
+    local artStartY = 2
+    for i, line in ipairs(stereoArt) do
+        centerText(artStartY + i - 1, line)
     end
 
-    -- Draw station buttons
-    local y = 5
-    for i, station in ipairs(stations) do
-        monitor.setCursorPos(1, y)
-        monitor.write("[" .. station.name .. "]")
-        y = y + 2
+    -- Update the status centered under the graphic
+    local statusY = artStartY + #stereoArt + 1
+    local statusMessage = ""
+    local statusColor = colors.white
+    if isPlaying then
+        statusMessage = "Playing - " .. currentStation.name
+        statusColor = colors.green
+    elseif interfaceLocked then
+        statusMessage = "Changing Stations..."
+        statusColor = colors.yellow
+    else
+        statusMessage = "Stopped"
+        statusColor = colors.red
     end
-    -- Draw Stop button
-    monitor.setCursorPos(1, y)
-    monitor.write("[Stop]")
+
+    -- Draw the status in a bubble
+    monitor.setTextColor(statusColor)
+    centerText(statusY, "[" .. statusMessage .. "]")
+    monitor.setTextColor(colors.white)
+
+    -- Draw station buttons larger and graphical
+    local buttonStartY = statusY + 2
+    local buttonHeight = 3
+    local buttonWidth = monWidth - 4 -- Padding on sides
+
+    for i, station in ipairs(stations) do
+        local buttonY = buttonStartY + (i - 1) * (buttonHeight + 1)
+        -- Draw button background
+        monitor.setBackgroundColor(colors.gray)
+        for yOffset = 0, buttonHeight - 1 do
+            monitor.setCursorPos(3, buttonY + yOffset)
+            monitor.write(string.rep(" ", buttonWidth))
+        end
+        -- Write station name centered
+        monitor.setTextColor(colors.white)
+        local nameX = math.floor((monWidth - #station.name) / 2) + 1
+        local nameY = buttonY + math.floor(buttonHeight / 2)
+        monitor.setCursorPos(nameX, nameY)
+        monitor.write(station.name)
+        monitor.setBackgroundColor(colors.black)
+    end
+
+    -- Draw Stop button differently (e.g., in red)
+    local stopButtonY = buttonStartY + #stations * (buttonHeight + 1)
+    -- Draw button background
+    monitor.setBackgroundColor(colors.red)
+    for yOffset = 0, buttonHeight - 1 do
+        monitor.setCursorPos(3, stopButtonY + yOffset)
+        monitor.write(string.rep(" ", buttonWidth))
+    end
+    -- Write "STOP" centered
+    monitor.setTextColor(colors.white)
+    local stopText = "STOP"
+    local stopX = math.floor((monWidth - #stopText) / 2) + 1
+    local stopY = stopButtonY + math.floor(buttonHeight / 2)
+    monitor.setCursorPos(stopX, stopY)
+    monitor.write(stopText)
+    monitor.setBackgroundColor(colors.black)
 end
 
 local function playStation(station)
@@ -91,11 +143,21 @@ local function handleMonitorTouch(x, y)
         -- Ignore touch events when interface is locked
         return
     end
-    local index = math.floor((y - 5) / 2) + 1
-    if index >= 1 and index <= #stations then
-        playStation(stations[index])
-    elseif index == #stations + 1 then
-        stopPlaying()
+    -- Calculate which button was pressed
+    local buttonStartY = 2 + #stereoArt + 1 + 2
+    local buttonHeight = 3
+    local totalButtons = #stations + 1 -- Including Stop button
+
+    for i = 1, totalButtons do
+        local buttonY = buttonStartY + (i - 1) * (buttonHeight + 1)
+        if y >= buttonY and y < buttonY + buttonHeight then
+            if i <= #stations then
+                playStation(stations[i])
+            else
+                stopPlaying()
+            end
+            break
+        end
     end
 end
 
