@@ -1,101 +1,74 @@
 import asyncio
 import websockets
 import subprocess
-import shlex
 import json
-import re
-
-async def get_youtube_hls_url(url):
-    cmd = [
-        'yt-dlp',
-        '-g',
-        '-f', 'bestaudio[protocol^=m3u8]',
-        url
-    ]
-    process = await asyncio.create_subprocess_exec(
-        *cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )
-    stdout, stderr = await process.communicate()
-    if process.returncode != 0:
-        print(f"yt-dlp error: {stderr.decode()}")
-        return None
-    hls_url = stdout.decode().strip()
-    return hls_url
-
-async def stream_audio(websocket, url, client_addr):
-    if "youtube.com" in url or "youtu.be" in url:
-        hls_url = await get_youtube_hls_url(url)
-        if not hls_url:
-            await websocket.send("Error: Could not extract HLS URL from YouTube link.")
-            return
-        print(f"[{client_addr}] Extracted HLS URL: {hls_url}")
-        ffmpeg_cmd = f"ffmpeg -re -i \"{hls_url}\" -f dfpwm -ar 48000 -ac 1 pipe:1"
-    else:
-        ffmpeg_cmd = f"ffmpeg -re -i \"{url}\" -f dfpwm -ar 48000 -ac 1 pipe:1"
-
-    print(f"[{client_addr}] Running command: {ffmpeg_cmd}")
-    process = await asyncio.create_subprocess_shell(
-        ffmpeg_cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-
-    async def send_audio():
-        try:
-            while True:
-                data = await process.stdout.read(4096)
-                if not data:
-                    print(f"[{client_addr}] FFmpeg has no more data.")
-                    break
-                await websocket.send(data)
-        except websockets.exceptions.ConnectionClosedError:
-            print(f"[{client_addr}] WebSocket connection closed unexpectedly.")
-        finally:
-            process.terminate()
-
-    async def log_stderr():
-        while True:
-            line = await process.stderr.readline()
-            if not line:
-                break
-            print(f"[{client_addr}] FFmpeg stderr: {line.decode().strip()}")
-
-    send_task = asyncio.create_task(send_audio())
-    stderr_task = asyncio.create_task(log_stderr())
-
-    await send_task
-    await process.wait()
-    stderr_task.cancel()
-    try:
-        await stderr_task
-    except asyncio.CancelledError:
-        pass
 
 async def handle_client(websocket, path):
     client_addr = websocket.remote_address
-    print(f"[{client_addr}] Client connected.")
     try:
         message = await websocket.recv()
-        print(f"[{client_addr}] Received message: {message}")
-        try:
-            data = json.loads(message)
-            url = data.get('stream_url')
-            if not url:
-                print(f"[{client_addr}] 'stream_url' key not found in JSON.")
-                await websocket.send("Error: 'stream_url' key not found in the message.")
-                return
-        except json.JSONDecodeError:
-            print(f"[{client_addr}] Invalid JSON received.")
-            await websocket.send("Error: Invalid JSON format.")
+        request = json.loads(message)
+        stream_url = request.get('stream_url')
+
+        if not stream_url:
+            await websocket.send(json.dumps({'error': 'No stream URL provided.'}))
             return
 
-        print(f"[{client_addr}] Streaming URL: {url}")
-        await stream_audio(websocket, url, client_addr)
-    except websockets.exceptions.ConnectionClosedError:
-        print(f"[{client_addr}] Client disconnected abruptly.")
+        print(f"[{client_addr}] Client connected. Streaming: {stream_url}")
+
+        # Start streaming the audio to the client
+        await stream_audio(websocket, stream_url, client_addr)
+    except websockets.exceptions.ConnectionClosed:
+        print(f"[{client_addr}] Connection closed during initial handshake.")
     except Exception as e:
-        print(f"[{client_addr}] Error: {e}")
+        print(f"[{client_addr}] Error during initial handshake: {e}")
+
+async def stream_audio(websocket, stream_url, client_addr):
+    ffmpeg_cmd = [
+        'ffmpeg',
+        '-i', stream_url,
+        '-f', 'dfpwm',        # Output format
+        '-ar', '48000',       # Sample rate
+        '-ac', '1',           # Mono audio
+        '-vn',                # No video
+        'pipe:1'              # Output to stdout
+    ]
+
+    # Start the FFmpeg process asynchronously
+    ffmpeg_proc = await asyncio.create_subprocess_exec(
+        *ffmpeg_cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+
+    try:
+        while True:
+            # Read DFPWM data from FFmpeg asynchronously
+            dfpwm_data = await ffmpeg_proc.stdout.read(4096)
+            if not dfpwm_data:
+                # FFmpeg has no more data to send
+                print(f"[{client_addr}] FFmpeg has no more data.")
+                break
+
+            # Check if the websocket is still open before sending
+            if websocket.closed:
+                print(f"[{client_addr}] WebSocket closed unexpectedly.")
+                break
+
+            # Send the DFPWM data over the WebSocket
+            await websocket.send(dfpwm_data)
+    except websockets.exceptions.ConnectionClosed:
+        print(f"[{client_addr}] Client disconnected.")
+    except Exception as e:
+        print(f"[{client_addr}] Streaming error: {e}")
     finally:
+        # Terminate the FFmpeg process
+        if ffmpeg_proc.returncode is None:
+            ffmpeg_proc.kill()
+            await ffmpeg_proc.wait()
+            print(f"[{client_addr}] FFmpeg process terminated.")
+
+        # Close the WebSocket if it's still open
         if not websocket.closed:
             await websocket.close()
             print(f"[{client_addr}] WebSocket closed.")
