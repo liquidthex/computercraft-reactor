@@ -75,8 +75,21 @@ async def handle_client(websocket, path):
     client_addr = websocket.remote_address
     print(f"[{client_addr}] Client connected.")
     try:
-        url = await websocket.recv()
-        print(f"[{client_addr}] Streaming: {url}")
+        message = await websocket.recv()
+        print(f"[{client_addr}] Received message: {message}")
+        try:
+            data = json.loads(message)
+            url = data.get('stream_url')
+            if not url:
+                print(f"[{client_addr}] 'stream_url' key not found in JSON.")
+                await websocket.send("Error: 'stream_url' key not found in the message.")
+                return
+        except json.JSONDecodeError:
+            print(f"[{client_addr}] Invalid JSON received.")
+            await websocket.send("Error: Invalid JSON format.")
+            return
+
+        print(f"[{client_addr}] Streaming URL: {url}")
         await stream_audio(websocket, url, client_addr)
     except websockets.exceptions.ConnectionClosedError:
         print(f"[{client_addr}] Client disconnected abruptly.")
