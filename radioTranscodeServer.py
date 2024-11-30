@@ -71,31 +71,28 @@ async def stream_audio(websocket, stream_url, client_addr):
         for header_name, header_value in http_headers.items():
             input_options.extend(['-headers', f"{header_name}: {header_value}\r\n"])
 
-        # Now use FFmpeg to stream from the media_url with headers
+        # FFmpeg command with buffering options
         ffmpeg_cmd = [
             'ffmpeg',
-            '-re',                  # Add this line to read input at real-time speed
             *input_options,
             '-i', media_url,
+            '-fflags', '+nobuffer',
+            '-flags', 'low_delay',
+            '-af', 'aresample=async=1',
             '-f', 'dfpwm',
             '-ar', '48000',
             '-ac', '1',
             '-vn',
             'pipe:1'
         ]
-
-        # Start the FFmpeg process asynchronously
-        ffmpeg_proc = await asyncio.create_subprocess_exec(
-            *ffmpeg_cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
     else:
-        # Use FFmpeg directly for other URLs
+        # Use FFmpeg directly for other URLs with buffering options
         ffmpeg_cmd = [
             'ffmpeg',
-            '-re',                  # Add '-re' here as well
             '-i', stream_url,
+            '-fflags', '+nobuffer',
+            '-flags', 'low_delay',
+            '-af', 'aresample=async=1',
             '-f', 'dfpwm',
             '-ar', '48000',
             '-ac', '1',
@@ -103,12 +100,12 @@ async def stream_audio(websocket, stream_url, client_addr):
             'pipe:1'
         ]
 
-        # Start the FFmpeg process asynchronously
-        ffmpeg_proc = await asyncio.create_subprocess_exec(
-            *ffmpeg_cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
+    # Start the FFmpeg process asynchronously
+    ffmpeg_proc = await asyncio.create_subprocess_exec(
+        *ffmpeg_cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
 
     # Function to log FFmpeg stderr
     async def log_ffmpeg_stderr():
@@ -121,10 +118,14 @@ async def stream_audio(websocket, stream_url, client_addr):
     # Start the stderr logging task
     stderr_task = asyncio.create_task(log_ffmpeg_stderr())
 
+    # Variables for flow control
+    buffer_size = 1024  # Smaller buffer size for smoother streaming
+    bytes_per_second = 48000 * 1 * 1  # Sample rate * channels * bytes per sample (assuming 8-bit samples)
+
     try:
         while True:
             # Read DFPWM data from FFmpeg asynchronously
-            dfpwm_data = await ffmpeg_proc.stdout.read(4096)
+            dfpwm_data = await ffmpeg_proc.stdout.read(buffer_size)
             if not dfpwm_data:
                 # FFmpeg has no more data to send
                 print(f"[{client_addr}] FFmpeg has no more data.")
@@ -137,6 +138,9 @@ async def stream_audio(websocket, stream_url, client_addr):
 
             # Send the DFPWM data over the WebSocket
             await websocket.send(dfpwm_data)
+
+            # Sleep to maintain consistent data flow
+            await asyncio.sleep(buffer_size / bytes_per_second)
     except websockets.exceptions.ConnectionClosed:
         print(f"[{client_addr}] Client disconnected.")
     except Exception as e:
@@ -162,7 +166,7 @@ async def stream_audio(websocket, stream_url, client_addr):
 
 async def main():
     print("Streaming server started on port 8765.")
-    async with websockets.serve(handle_client, '0.0.0.0', 8765):
+    async with websockets.serve(handle_client, '0.0.0.0', 8765, max_size=None):
         await asyncio.Future()  # Run forever
 
 if __name__ == "__main__":
