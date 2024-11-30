@@ -2,6 +2,35 @@ import asyncio
 import websockets
 import subprocess
 import json
+from urllib.parse import urlparse
+
+def is_youtube_url(url):
+    parsed_url = urlparse(url)
+    domain = parsed_url.netloc.lower()
+    return 'youtube.com' in domain or 'youtu.be' in domain
+
+async def get_youtube_audio_url(youtube_url):
+    yt_dlp_cmd = [
+        'yt-dlp',
+        '-f', 'bestaudio',
+        '--no-playlist',
+        '-g',  # Output the direct media URL
+        youtube_url
+    ]
+
+    proc = await asyncio.create_subprocess_exec(
+        *yt_dlp_cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await proc.communicate()
+
+    if proc.returncode != 0:
+        error_message = stderr.decode().strip()
+        print(f"yt-dlp error: {error_message}")
+        return None
+    media_url = stdout.decode().strip()
+    return media_url
 
 async def handle_client(websocket, path):
     client_addr = websocket.remote_address
@@ -24,9 +53,25 @@ async def handle_client(websocket, path):
         print(f"[{client_addr}] Error during initial handshake: {e}")
 
 async def stream_audio(websocket, stream_url, client_addr):
+    if is_youtube_url(stream_url):
+        # Handle YouTube URL
+        media_url = await get_youtube_audio_url(stream_url)
+        if not media_url:
+            error_msg = 'Failed to extract audio URL from YouTube link.'
+            print(f"[{client_addr}] {error_msg}")
+            await websocket.send(json.dumps({'error': error_msg}))
+            return
+
+        print(f"[{client_addr}] Extracted media URL: {media_url}")
+
+        ffmpeg_input = media_url
+    else:
+        # Handle regular streaming URL
+        ffmpeg_input = stream_url
+
     ffmpeg_cmd = [
         'ffmpeg',
-        '-i', stream_url,
+        '-i', ffmpeg_input,
         '-f', 'dfpwm',        # Output format
         '-ar', '48000',       # Sample rate
         '-ac', '1',           # Mono audio
