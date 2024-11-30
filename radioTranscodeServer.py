@@ -9,12 +9,12 @@ def is_youtube_url(url):
     domain = parsed_url.netloc.lower()
     return 'youtube.com' in domain or 'youtu.be' in domain
 
-async def get_media_url(stream_url):
+async def get_media_info(stream_url):
     yt_dlp_cmd = [
         'yt-dlp',
         '-f', 'bestaudio',
         '--no-playlist',
-        '--get-url',
+        '--print-json',
         stream_url
     ]
 
@@ -29,8 +29,8 @@ async def get_media_url(stream_url):
         error_message = stderr.decode().strip()
         print(f"yt-dlp error: {error_message}")
         return None
-    media_url = stdout.decode().strip()
-    return media_url
+    media_info = json.loads(stdout.decode())
+    return media_info
 
 async def handle_client(websocket, path):
     client_addr = websocket.remote_address
@@ -54,19 +54,28 @@ async def handle_client(websocket, path):
 
 async def stream_audio(websocket, stream_url, client_addr):
     if is_youtube_url(stream_url):
-        # Get the media URL from yt-dlp
-        media_url = await get_media_url(stream_url)
-        if not media_url:
-            error_msg = 'Failed to get media URL from yt-dlp.'
+        # Get the media info from yt-dlp
+        media_info = await get_media_info(stream_url)
+        if not media_info:
+            error_msg = 'Failed to get media info from yt-dlp.'
             print(f"[{client_addr}] {error_msg}")
             await websocket.send(json.dumps({'error': error_msg}))
             return
 
+        media_url = media_info.get('url')
+        http_headers = media_info.get('http_headers', {})
         print(f"[{client_addr}] Retrieved media URL: {media_url}")
 
-        # Now use FFmpeg to stream from the media_url
+        # Prepare FFmpeg input options
+        input_options = []
+        for header_name, header_value in http_headers.items():
+            input_options.extend(['-headers', f"{header_name}: {header_value}\r\n"])
+
+        # Now use FFmpeg to stream from the media_url with headers
         ffmpeg_cmd = [
             'ffmpeg',
+            '-re',                  # Add this line to read input at real-time speed
+            *input_options,
             '-i', media_url,
             '-f', 'dfpwm',
             '-ar', '48000',
@@ -85,6 +94,7 @@ async def stream_audio(websocket, stream_url, client_addr):
         # Use FFmpeg directly for other URLs
         ffmpeg_cmd = [
             'ffmpeg',
+            '-re',                  # Add '-re' here as well
             '-i', stream_url,
             '-f', 'dfpwm',
             '-ar', '48000',
