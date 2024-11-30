@@ -91,6 +91,7 @@ async def stream_audio(websocket, stream_url, client_addr):
             '-re',                # Read input at native frame rate
             *input_options,
             '-i', ffmpeg_input,
+            '-af', 'aresample=async=1',
             '-f', 'dfpwm',        # Output format
             '-ar', '48000',       # Sample rate
             '-ac', '1',           # Mono audio
