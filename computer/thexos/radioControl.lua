@@ -78,14 +78,20 @@ local function drawInterface()
 
     for i, station in ipairs(stations) do
         local buttonY = buttonStartY + (i - 1) * (buttonHeight + 1)
+        -- Highlight the button if it's the currently playing station
+        if isPlaying and currentStation == station then
+            monitor.setBackgroundColor(colors.lime)
+            monitor.setTextColor(colors.black)
+        else
+            monitor.setBackgroundColor(colors.gray)
+            monitor.setTextColor(colors.white)
+        end
         -- Draw button background
-        monitor.setBackgroundColor(colors.gray)
         for yOffset = 0, buttonHeight - 1 do
             monitor.setCursorPos(3, buttonY + yOffset)
             monitor.write(string.rep(" ", buttonWidth))
         end
         -- Write station name centered
-        monitor.setTextColor(colors.white)
         local nameX = math.floor((monWidth - #station.name) / 2) + 1
         local nameY = buttonY + math.floor(buttonHeight / 2)
         monitor.setCursorPos(nameX, nameY)
