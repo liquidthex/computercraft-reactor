@@ -57,13 +57,26 @@ async def stream_audio(websocket, stream_url, client_addr):
         ]
         ffmpeg_proc = await asyncio.create_subprocess_exec(
             *ffmpeg_cmd,
-            stdin=yt_dlp_proc.stdout,
+            stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
 
-        # Close yt-dlp's stdout to allow proper pipe closure
-        yt_dlp_proc.stdout.close()
+        # Function to pipe data from yt-dlp to ffmpeg
+        async def pipe_data():
+            try:
+                while True:
+                    data = await yt_dlp_proc.stdout.read(4096)
+                    if not data:
+                        break
+                    ffmpeg_proc.stdin.write(data)
+                    await ffmpeg_proc.stdin.drain()
+                ffmpeg_proc.stdin.close()
+            except Exception as e:
+                print(f"[{client_addr}] Pipe error: {e}")
+
+        # Start piping data
+        pipe_task = asyncio.create_task(pipe_data())
 
         # Function to log yt-dlp stderr
         async def log_yt_dlp_stderr():
@@ -126,13 +139,18 @@ async def stream_audio(websocket, stream_url, client_addr):
             await ffmpeg_proc.wait()
             print(f"[{client_addr}] FFmpeg process terminated.")
 
-        # Terminate yt-dlp process if it exists
         if is_youtube_url(stream_url):
+            # Terminate yt-dlp process
             if yt_dlp_proc.returncode is None:
                 yt_dlp_proc.kill()
                 await yt_dlp_proc.wait()
                 print(f"[{client_addr}] yt-dlp process terminated.")
-            # Cancel yt-dlp stderr task
+            # Cancel tasks
+            pipe_task.cancel()
+            try:
+                await pipe_task
+            except asyncio.CancelledError:
+                pass
             yt_dlp_stderr_task.cancel()
             try:
                 await yt_dlp_stderr_task
