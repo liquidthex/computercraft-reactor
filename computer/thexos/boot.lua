@@ -93,7 +93,8 @@ function getLatestCommitHash()
 end
 
 -- Function to run a script when specified peripherals are connected
-local function runOnFindPeripherals(peripheralsList, scriptPath)
+local function runOnFindPeripherals(peripheralsList, scriptPath, multishell)
+    multishell = multishell == nil and true or multishell
     for _, peripheralName in ipairs(peripheralsList) do
         if not peripheral.find(peripheralName) then
             print("Peripheral not found: " .. peripheralName .. ". Skipping " .. scriptPath)
@@ -102,9 +103,13 @@ local function runOnFindPeripherals(peripheralsList, scriptPath)
     end
 
     if fs.exists(scriptPath) then
-        -- Launch the script in a new multishell tab
-        multishell.launch({}, scriptPath)
-        print("Launched " .. scriptPath .. " in background.")
+        if multishell then
+            multishell.launch({}, scriptPath)
+            print("Launched " .. scriptPath .. " in background.")
+        else
+            shell.run(scriptPath)
+            print("Running " .. scriptPath .. " in foreground.")
+        end
     else
         print("Script not found: " .. scriptPath)
     end
@@ -124,7 +129,7 @@ local function main()
 
     -- Launch scripts based on connected peripherals
     runOnFindPeripherals({"monitor", "fissionReactorLogicAdapter"}, "thexos/reactorControl.lua")
-    runOnFindPeripherals({"monitor", "speaker"}, "thexos/radioControl.lua")
+    runOnFindPeripherals({"monitor", "speaker"}, "thexos/radioControl.lua", false)
 
     -- Clear the screen and reset the cursor position before printing motd
     term.clear()
