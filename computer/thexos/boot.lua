@@ -124,6 +124,7 @@ local function main()
 
     -- Launch scripts based on connected peripherals
     runOnFindPeripherals({"monitor", "fissionReactorLogicAdapter"}, "thexos/reactorControl.lua")
+    runOnFindPeripherals({"monitor", "speaker"}, "thexos/radioControl.lua")
 
     -- Clear the screen and reset the cursor position before printing motd
     term.clear()
