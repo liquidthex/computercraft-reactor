@@ -9,12 +9,12 @@ def is_youtube_url(url):
     domain = parsed_url.netloc.lower()
     return 'youtube.com' in domain or 'youtu.be' in domain
 
-async def get_youtube_audio_url(youtube_url):
+async def get_youtube_media_info(youtube_url):
     yt_dlp_cmd = [
         'yt-dlp',
         '-f', 'bestaudio',
         '--no-playlist',
-        '-g',  # Output the direct media URL
+        '--print-json',
         youtube_url
     ]
 
@@ -29,8 +29,14 @@ async def get_youtube_audio_url(youtube_url):
         error_message = stderr.decode().strip()
         print(f"yt-dlp error: {error_message}")
         return None
-    media_url = stdout.decode().strip()
-    return media_url
+
+    try:
+        media_info = json.loads(stdout.decode())
+    except json.JSONDecodeError as e:
+        print(f"JSON decode error: {e}")
+        return None
+
+    return media_info
 
 async def handle_client(websocket, path):
     client_addr = websocket.remote_address
@@ -55,21 +61,34 @@ async def handle_client(websocket, path):
 async def stream_audio(websocket, stream_url, client_addr):
     if is_youtube_url(stream_url):
         # Handle YouTube URL
-        media_url = await get_youtube_audio_url(stream_url)
+        media_info = await get_youtube_media_info(stream_url)
+        if not media_info:
+            error_msg = 'Failed to extract media info from YouTube link.'
+            print(f"[{client_addr}] {error_msg}")
+            await websocket.send(json.dumps({'error': error_msg}))
+            return
+
+        media_url = media_info.get('url')
+        http_headers = media_info.get('http_headers', {})
+
         if not media_url:
-            error_msg = 'Failed to extract audio URL from YouTube link.'
+            error_msg = 'No media URL found in media info.'
             print(f"[{client_addr}] {error_msg}")
             await websocket.send(json.dumps({'error': error_msg}))
             return
 
         print(f"[{client_addr}] Extracted media URL: {media_url}")
 
+        # Prepare FFmpeg input options with headers
+        input_options = []
+        for header_name, header_value in http_headers.items():
+            input_options.extend(['-headers', f"{header_name}: {header_value}\r\n"])
+
         ffmpeg_input = media_url
 
-        # Add '-re' flag for real-time streaming from file-like inputs
         ffmpeg_cmd = [
             'ffmpeg',
-            '-re',                # Read input at native frame rate
+            *input_options,
             '-i', ffmpeg_input,
             '-f', 'dfpwm',        # Output format
             '-ar', '48000',       # Sample rate
