@@ -56,16 +56,31 @@ async def stream_audio(websocket, stream_url, client_addr):
             stderr=asyncio.subprocess.PIPE
         )
 
-        # Start FFmpeg process, taking input from yt-dlp's stdout
+        # Start FFmpeg process, taking input from our code
         ffmpeg_proc = await asyncio.create_subprocess_exec(
             *ffmpeg_cmd,
-            stdin=yt_dlp_proc.stdout,
+            stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
 
-        # Close yt-dlp's stdout to allow it to receive a SIGPIPE if ffmpeg exits
-        yt_dlp_proc.stdout.close()
+        # Function to transfer data from yt-dlp to FFmpeg
+        async def transfer_data():
+            try:
+                while True:
+                    chunk = await yt_dlp_proc.stdout.read(4096)
+                    if not chunk:
+                        break
+                    ffmpeg_proc.stdin.write(chunk)
+                    await ffmpeg_proc.stdin.drain()
+            except Exception as e:
+                print(f"[{client_addr}] Data transfer error: {e}")
+            finally:
+                ffmpeg_proc.stdin.close()
+                await ffmpeg_proc.stdin.wait_closed()
+
+        # Start the data transfer task
+        transfer_task = asyncio.create_task(transfer_data())
     else:
         # Use FFmpeg directly for other URLs
         ffmpeg_cmd = [
@@ -106,17 +121,24 @@ async def stream_audio(websocket, stream_url, client_addr):
     except Exception as e:
         print(f"[{client_addr}] Streaming error: {e}")
     finally:
-        # Terminate FFmpeg process
+        # Clean up processes
+        if is_youtube_url(stream_url):
+            # Cancel the data transfer task
+            transfer_task.cancel()
+            try:
+                await transfer_task
+            except asyncio.CancelledError:
+                pass
+
+            if yt_dlp_proc.returncode is None:
+                yt_dlp_proc.kill()
+                await yt_dlp_proc.wait()
+                print(f"[{client_addr}] yt-dlp process terminated.")
+
         if ffmpeg_proc.returncode is None:
             ffmpeg_proc.kill()
             await ffmpeg_proc.wait()
             print(f"[{client_addr}] FFmpeg process terminated.")
-
-        # Terminate yt-dlp process if it was started
-        if is_youtube_url(stream_url) and yt_dlp_proc.returncode is None:
-            yt_dlp_proc.kill()
-            await yt_dlp_proc.wait()
-            print(f"[{client_addr}] yt-dlp process terminated.")
 
         # Close the WebSocket if it's still open
         if not websocket.closed:
