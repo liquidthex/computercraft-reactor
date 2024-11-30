@@ -213,7 +213,7 @@ local function streamAudio()
             parallel.waitForAny(playAudio, receiveAudio)
             
             -- Ensure the WebSocket is closed
-            if ws and ws.isOpen() then
+            if ws then
                 ws.close()
             end
             
