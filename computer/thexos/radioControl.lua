@@ -2,8 +2,9 @@
 
 -- Table of predefined stations
 local stations = {
-    {name = "Station 1", url = "http://example.com/stream1"},
-    {name = "Station 2", url = "http://example.com/stream2"},
+    {name = "Wefunk", url = "http://s-00.wefunkradio.com:81/wefunk64.mp3"},
+    {name = "Groove Salad", url = "https://ice4.somafm.com/groovesalad-128-mp3"},
+    {name = "DEFCON Radio", url = "https://ice5.somafm.com/defcon-128-mp3"},
     -- Add or remove stations here
 }
 
