@@ -20,25 +20,33 @@ local monWidth, monHeight = monitor.getSize()
 local isPlaying = false
 local currentStation = nil
 local running = false
+local interfaceLocked = false -- Variable to lock the interface during station change
 
 -- Functions
+
+local function updateStatus(message, color)
+    monitor.setCursorPos(1, 3)
+    monitor.setTextColor(colors.white)
+    monitor.write("Status: ")
+    monitor.setTextColor(color or colors.white)
+    monitor.write(message .. "                  ") -- Clear any leftover text
+    monitor.setTextColor(colors.white)
+end
 
 local function drawInterface()
     monitor.clear()
     monitor.setCursorPos(1, 1)
     monitor.setTextColor(colors.white)
     monitor.write("=== Radio Control ===")
-    monitor.setCursorPos(1, 3)
-    monitor.write("Status: ")
+    -- Update the status
     if isPlaying then
-        monitor.setTextColor(colors.green)
-        monitor.write("Playing - " .. currentStation.name)
+        updateStatus("Playing - " .. currentStation.name, colors.green)
+    elseif interfaceLocked then
+        updateStatus("Changing Stations...", colors.yellow)
     else
-        monitor.setTextColor(colors.red)
-        monitor.write("Stopped")
+        updateStatus("Stopped", colors.red)
     end
-    monitor.setTextColor(colors.white)
-    
+
     -- Draw station buttons
     local y = 5
     for i, station in ipairs(stations) do
@@ -56,12 +64,16 @@ local function playStation(station)
         running = false
         isPlaying = false
         currentStation = nil
-        -- Wait a moment for the streaming to stop
-        os.sleep(0.1)
+        -- Update the status to "Changing Stations..." in yellow
+        interfaceLocked = true -- Lock the interface
+        drawInterface()
+        -- Wait for 5 seconds
+        os.sleep(5)
     end
     currentStation = station
     isPlaying = true
     running = true
+    interfaceLocked = false -- Unlock the interface
     drawInterface()
 end
 
@@ -75,6 +87,10 @@ local function stopPlaying()
 end
 
 local function handleMonitorTouch(x, y)
+    if interfaceLocked then
+        -- Ignore touch events when interface is locked
+        return
+    end
     local index = math.floor((y - 5) / 2) + 1
     if index >= 1 and index <= #stations then
         playStation(stations[index])
