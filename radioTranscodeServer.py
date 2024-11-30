@@ -2,6 +2,12 @@ import asyncio
 import websockets
 import subprocess
 import json
+from urllib.parse import urlparse
+
+def is_youtube_url(url):
+    parsed_url = urlparse(url)
+    domain = parsed_url.netloc.lower()
+    return 'youtube.com' in domain or 'youtu.be' in domain
 
 async def handle_client(websocket, path):
     client_addr = websocket.remote_address
@@ -24,22 +30,60 @@ async def handle_client(websocket, path):
         print(f"[{client_addr}] Error during initial handshake: {e}")
 
 async def stream_audio(websocket, stream_url, client_addr):
-    ffmpeg_cmd = [
-        'ffmpeg',
-        '-i', stream_url,
-        '-f', 'dfpwm',        # Output format
-        '-ar', '48000',       # Sample rate
-        '-ac', '1',           # Mono audio
-        '-vn',                # No video
-        'pipe:1'              # Output to stdout
-    ]
+    if is_youtube_url(stream_url):
+        # Use yt-dlp and FFmpeg pipeline for YouTube URLs
+        yt_dlp_cmd = [
+            'yt-dlp',
+            '-f', 'bestaudio',
+            '--no-playlist',
+            '-o', '-',     # Output to stdout
+            stream_url
+        ]
+        ffmpeg_cmd = [
+            'ffmpeg',
+            '-i', 'pipe:0',   # Input from stdin
+            '-f', 'dfpwm',    # Output format
+            '-ar', '48000',   # Sample rate
+            '-ac', '1',       # Mono audio
+            '-vn',            # No video
+            'pipe:1'          # Output to stdout
+        ]
 
-    # Start the FFmpeg process asynchronously
-    ffmpeg_proc = await asyncio.create_subprocess_exec(
-        *ffmpeg_cmd,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
+        # Start yt-dlp process
+        yt_dlp_proc = await asyncio.create_subprocess_exec(
+            *yt_dlp_cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+
+        # Start FFmpeg process, taking input from yt-dlp's stdout
+        ffmpeg_proc = await asyncio.create_subprocess_exec(
+            *ffmpeg_cmd,
+            stdin=yt_dlp_proc.stdout,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+
+        # Close yt-dlp's stdout to allow it to receive a SIGPIPE if ffmpeg exits
+        yt_dlp_proc.stdout.close()
+    else:
+        # Use FFmpeg directly for other URLs
+        ffmpeg_cmd = [
+            'ffmpeg',
+            '-i', stream_url,
+            '-f', 'dfpwm',
+            '-ar', '48000',
+            '-ac', '1',
+            '-vn',
+            'pipe:1'
+        ]
+
+        # Start the FFmpeg process asynchronously
+        ffmpeg_proc = await asyncio.create_subprocess_exec(
+            *ffmpeg_cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
 
     try:
         while True:
@@ -62,11 +106,17 @@ async def stream_audio(websocket, stream_url, client_addr):
     except Exception as e:
         print(f"[{client_addr}] Streaming error: {e}")
     finally:
-        # Terminate the FFmpeg process
+        # Terminate FFmpeg process
         if ffmpeg_proc.returncode is None:
             ffmpeg_proc.kill()
             await ffmpeg_proc.wait()
             print(f"[{client_addr}] FFmpeg process terminated.")
+
+        # Terminate yt-dlp process if it was started
+        if is_youtube_url(stream_url) and yt_dlp_proc.returncode is None:
+            yt_dlp_proc.kill()
+            await yt_dlp_proc.wait()
+            print(f"[{client_addr}] yt-dlp process terminated.")
 
         # Close the WebSocket if it's still open
         if not websocket.closed:
