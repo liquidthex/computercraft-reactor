@@ -87,7 +87,7 @@ local function urlInputLoop()
     while true do
         term.clear()
         term.setCursorPos(1, 1)
-        term.write("Enter Radio URL (or press Enter to skip): ")
+        term.write("Custom Radio URL:\n")
         local url = read()
         if url and url ~= "" then
             local customStation = {name = "Custom URL", url = url}
