@@ -100,6 +100,17 @@ async def stream_audio(websocket, stream_url, client_addr):
             stderr=asyncio.subprocess.PIPE
         )
 
+    # Function to log FFmpeg stderr
+    async def log_ffmpeg_stderr():
+        while True:
+            line = await ffmpeg_proc.stderr.readline()
+            if not line:
+                break
+            print(f"[{client_addr}] FFmpeg stderr: {line.decode().strip()}")
+
+    # Start the stderr logging task
+    stderr_task = asyncio.create_task(log_ffmpeg_stderr())
+
     try:
         while True:
             # Read DFPWM data from FFmpeg asynchronously
@@ -126,6 +137,13 @@ async def stream_audio(websocket, stream_url, client_addr):
             ffmpeg_proc.kill()
             await ffmpeg_proc.wait()
             print(f"[{client_addr}] FFmpeg process terminated.")
+
+        # Cancel the stderr logging task
+        stderr_task.cancel()
+        try:
+            await stderr_task
+        except asyncio.CancelledError:
+            pass
 
         # Close the WebSocket if it's still open
         if not websocket.closed:
