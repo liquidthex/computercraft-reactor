@@ -48,12 +48,13 @@ async def stream_audio(websocket, stream_url, client_addr):
         # Start ffmpeg process, reading from stdin
         ffmpeg_cmd = [
             'ffmpeg',
-            '-i', 'pipe:0',     # Read from stdin
+            '-re',               # Read input at native frame rate
+            '-i', 'pipe:0',      # Read from stdin
             '-f', 'dfpwm',
             '-ar', '48000',
             '-ac', '1',
             '-vn',
-            'pipe:1'            # Output to stdout
+            'pipe:1'             # Output to stdout
         ]
         ffmpeg_proc = await asyncio.create_subprocess_exec(
             *ffmpeg_cmd,
