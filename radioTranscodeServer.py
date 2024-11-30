@@ -88,6 +88,7 @@ async def stream_audio(websocket, stream_url, client_addr):
 
         ffmpeg_cmd = [
             'ffmpeg',
+            '-re',                # Read input at native frame rate
             *input_options,
             '-i', ffmpeg_input,
             '-f', 'dfpwm',        # Output format
