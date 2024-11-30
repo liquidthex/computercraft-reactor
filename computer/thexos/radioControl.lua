@@ -46,10 +46,6 @@ local function drawInterface()
         monitor.write("[" .. station.name .. "]")
         y = y + 2
     end
-    -- Draw Custom URL button
-    monitor.setCursorPos(1, y)
-    monitor.write("[Custom URL]")
-    y = y + 2
     -- Draw Stop button
     monitor.setCursorPos(1, y)
     monitor.write("[Stop]")
@@ -83,22 +79,22 @@ local function handleMonitorTouch(x, y)
     if index >= 1 and index <= #stations then
         playStation(stations[index])
     elseif index == #stations + 1 then
-        promptForURL()
-    elseif index == #stations + 2 then
         stopPlaying()
     end
 end
 
-local function promptForURL()
-    term.clear()
-    term.setCursorPos(1, 1)
-    term.write("Enter Radio URL: ")
-    local url = read()
-    if url and url ~= "" then
-        local customStation = {name = "Custom Station", url = url}
-        playStation(customStation)
-    else
-        drawInterface()
+local function urlInputLoop()
+    while true do
+        term.clear()
+        term.setCursorPos(1, 1)
+        term.write("Enter Radio URL (or press Enter to skip): ")
+        local url = read()
+        if url and url ~= "" then
+            local customStation = {name = "Custom URL", url = url}
+            playStation(customStation)
+        end
+        -- Wait a bit before prompting again
+        os.sleep(0.1)
     end
 end
 
@@ -240,12 +236,9 @@ local function eventLoop()
         local event, param1, param2, param3 = os.pullEvent()
         if event == "monitor_touch" then
             handleMonitorTouch(param2, param3)
-        elseif event == "key" and keys.getName(param1) == "enter" then
-            promptForURL()
-            drawInterface()
         end
     end
 end
 
--- Run the event loop and streaming in parallel
-parallel.waitForAny(eventLoop, streamAudio)
+-- Run the event loop, streaming, and URL input loop in parallel
+parallel.waitForAny(eventLoop, streamAudio, urlInputLoop)
