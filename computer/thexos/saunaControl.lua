@@ -1,5 +1,5 @@
 -- Configuration
-local monitorSide = "monitor"    -- Adjust to your monitor's peripheral name
+local monitorSide = "back"    -- Adjust to your monitor's peripheral name
 local redstoneSide = "bottom"
 local warmupTime = 60            -- seconds of warmup
 local cooldownTime = 15          -- seconds of cooldown
