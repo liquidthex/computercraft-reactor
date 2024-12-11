@@ -5,7 +5,7 @@ local warmupTime = 60           -- seconds of warmup
 local cooldownTime = 15         -- seconds of cooldown
 local backgroundColor = colors.black
 local borderColor = colors.white
-local buttonInteriorColor = colors.red
+local buttonInteriorColor = colors.pink
 local textColor = colors.white
 local warmupBarColor = colors.orange
 local fullBarColor = colors.lime
@@ -31,22 +31,27 @@ local chosenTime = 0  -- total run time user selected (seconds, includes warmup)
 local startTime = 0
 local running = false
 
--- Button definitions: 3 horizontal buttons side by side
+-- Distribute the width evenly among 3 buttons, with the remainder on the last button
 local numButtons = #timeOptions
-local buttonWidth = math.floor(monW / numButtons)
-local buttonHeight = monH
-local buttons = {}
+local baseWidth = math.floor(monW / numButtons)
+local remainder = monW % numButtons
 
+local buttons = {}
+local xStart = 1
 for i, t in ipairs(timeOptions) do
-    local xStart = (i-1)*buttonWidth + 1
-    local xEnd = xStart + buttonWidth - 1
+    local thisWidth = baseWidth
+    if i == numButtons then
+        thisWidth = thisWidth + remainder
+    end
+    local xEnd = xStart + thisWidth - 1
     buttons[i] = {
         x1 = xStart,
         y1 = 1,
         x2 = xEnd,
-        y2 = buttonHeight,
+        y2 = monH,
         time = t * 60
     }
+    xStart = xEnd + 1
 end
 
 -- Helper functions
@@ -70,32 +75,37 @@ end
 local function drawButtonsIdle()
     clearMonitor()
     for i, btn in ipairs(buttons) do
-        -- Draw border
-        -- Top border line
+        local bw = btn.x2 - btn.x1 + 1
+        local bh = btn.y2 - btn.y1 + 1
+
+        -- Draw border top
         mon.setBackgroundColor(borderColor)
         mon.setCursorPos(btn.x1, btn.y1)
-        mon.write(string.rep(" ", btn.x2 - btn.x1 + 1))
+        mon.write(string.rep(" ", bw))
 
-        -- Bottom border line
+        -- Draw border bottom
         mon.setCursorPos(btn.x1, btn.y2)
-        mon.write(string.rep(" ", btn.x2 - btn.x1 + 1))
+        mon.write(string.rep(" ", bw))
 
-        -- Left and right border
+        -- Draw left/right borders and interior
         for y = btn.y1+1, btn.y2-1 do
+            -- Left border
             mon.setCursorPos(btn.x1, y)
+            mon.setBackgroundColor(borderColor)
             mon.write(" ")
+
+            -- Interior
+            mon.setBackgroundColor(buttonInteriorColor)
+            mon.setCursorPos(btn.x1+1, y)
+            mon.write(string.rep(" ", bw-2))
+
+            -- Right border
+            mon.setBackgroundColor(borderColor)
             mon.setCursorPos(btn.x2, y)
             mon.write(" ")
         end
 
-        -- Fill interior
-        mon.setBackgroundColor(buttonInteriorColor)
-        for y = btn.y1+1, btn.y2-1 do
-            mon.setCursorPos(btn.x1+1, y)
-            mon.write(string.rep(" ", btn.x2 - btn.x1 - 1))
-        end
-
-        -- Draw label inside the interior area
+        -- Label
         local label = tostring(timeOptions[i]).." Mins"
         local labelY = math.floor((btn.y1 + btn.y2)/2)
         drawTextCenteredInArea(labelY, label, btn.x1+1, btn.x2-1, buttonInteriorColor, textColor)
@@ -171,7 +181,6 @@ local function drawProgressBar()
 
     mon.setBackgroundColor(backgroundColor)
     mon.setTextColor(textColor)
-    -- Center these lines across the whole screen
     local title = "Sauna Therapy Progress"
     drawTextCenteredInArea(barY - 2, title, 1, w, backgroundColor, textColor)
     drawTextCenteredInArea(barY + barHeight + 1, timeStr, 1, w, backgroundColor, textColor)
