@@ -4,7 +4,8 @@ local redstoneSide = "bottom"
 local warmupTime = 60           -- seconds of warmup
 local cooldownTime = 15         -- seconds of cooldown
 local backgroundColor = colors.black
-local buttonColor = colors.gray
+local borderColor = colors.white
+local buttonInteriorColor = colors.red
 local textColor = colors.white
 local warmupBarColor = colors.orange
 local fullBarColor = colors.lime
@@ -69,16 +70,35 @@ end
 local function drawButtonsIdle()
     clearMonitor()
     for i, btn in ipairs(buttons) do
-        mon.setBackgroundColor(buttonColor)
-        -- Draw the button background
-        for y = btn.y1, btn.y2 do
+        -- Draw border
+        -- Top border line
+        mon.setBackgroundColor(borderColor)
+        mon.setCursorPos(btn.x1, btn.y1)
+        mon.write(string.rep(" ", btn.x2 - btn.x1 + 1))
+
+        -- Bottom border line
+        mon.setCursorPos(btn.x1, btn.y2)
+        mon.write(string.rep(" ", btn.x2 - btn.x1 + 1))
+
+        -- Left and right border
+        for y = btn.y1+1, btn.y2-1 do
             mon.setCursorPos(btn.x1, y)
-            mon.write(string.rep(" ", btn.x2 - btn.x1 + 1))
+            mon.write(" ")
+            mon.setCursorPos(btn.x2, y)
+            mon.write(" ")
         end
-        -- Draw the label centered in the button
+
+        -- Fill interior
+        mon.setBackgroundColor(buttonInteriorColor)
+        for y = btn.y1+1, btn.y2-1 do
+            mon.setCursorPos(btn.x1+1, y)
+            mon.write(string.rep(" ", btn.x2 - btn.x1 - 1))
+        end
+
+        -- Draw label inside the interior area
         local label = tostring(timeOptions[i]).." Mins"
         local labelY = math.floor((btn.y1 + btn.y2)/2)
-        drawTextCenteredInArea(labelY, label, btn.x1, btn.x2, buttonColor, textColor)
+        drawTextCenteredInArea(labelY, label, btn.x1+1, btn.x2-1, buttonInteriorColor, textColor)
     end
 end
 
