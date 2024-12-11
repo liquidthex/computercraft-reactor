@@ -1,5 +1,5 @@
 -- Configuration
-local monitorSide = "back"    -- Adjust to your monitor's peripheral name
+local monitorSide = "back"   -- Your monitor peripheral name
 local redstoneSide = "bottom"
 local warmupTime = 60            -- seconds of warmup
 local cooldownTime = 15          -- seconds of cooldown
@@ -26,24 +26,37 @@ local monW, monH = mon.getSize()
 
 local buttons = {}
 local state = "IDLE"
-local chosenTime = 0        -- user chosen total run time in seconds (excludes cooldown)
+local chosenTime = 0        -- total run time (in seconds) user selected (includes warmup)
 local startTime = 0
 local running = false
 
-local endOfRunTime = 0      -- when chosenTime ends (after warmup+full)
-local cooldownStartTime = 0
+-- For timing the updates
+local refreshInterval = 0.5  -- update the display every 0.5 seconds
 
--- Helper functions
-local function drawCenteredText(y, text, bkg, txtcol, scale)
-    scale = scale or 1
-    mon.setTextScale(scale)
+-- Calculate button positions for the horizontal layout
+-- 3 buttons side-by-side taking full width and height
+local numButtons = #timeOptions
+local buttonWidth = math.floor(monW / numButtons)
+local buttonHeight = monH  -- Use full height
+for i, t in ipairs(timeOptions) do
+    local xStart = (i-1)*buttonWidth + 1
+    local xEnd = xStart + buttonWidth - 1
+    buttons[i] = {
+        x1 = xStart,
+        y1 = 1,
+        x2 = xEnd,
+        y2 = buttonHeight,
+        time = t * 60
+    }
+end
+
+local function drawCenteredText(y, text, bkg, txtcol)
+    mon.setBackgroundColor(bkg or backgroundColor)
+    mon.setTextColor(txtcol or textColor)
     local w, h = mon.getSize()
     local x = math.floor((w - #text)/2) + 1
     mon.setCursorPos(x, y)
-    if bkg then mon.setBackgroundColor(bkg) end
-    if txtcol then mon.setTextColor(txtcol) end
     mon.write(text)
-    mon.setTextScale(1)
 end
 
 local function clearMonitor()
@@ -54,23 +67,21 @@ end
 
 local function drawButtonsIdle()
     clearMonitor()
-    local numButtons = #timeOptions
-    local buttonHeight = math.floor(monH / numButtons)
-    for i, t in ipairs(timeOptions) do
-        local yStart = (i-1)*buttonHeight + 1
-        local yEnd = i*buttonHeight
+    for i,btn in ipairs(buttons) do
         mon.setBackgroundColor(buttonColor)
-        for y = yStart, yEnd do
-            mon.setCursorPos(1,y)
-            mon.clearLine()
+        for y = btn.y1, btn.y2 do
+            mon.setCursorPos(btn.x1, y)
+            for x = btn.x1, btn.x2 do
+                mon.write(" ")
+            end
         end
-        local label = tostring(t).." Mins"
-        drawCenteredText(math.floor((yStart+yEnd)/2), label, buttonColor, textColor)
-        buttons[i] = {x1=1, y1=yStart, x2=monW, y2=yEnd, time=t*60} -- in seconds
+        local label = tostring(timeOptions[i]).." Mins"
+        local labelY = math.floor((btn.y1 + btn.y2)/2)
+        drawCenteredText(labelY, label, buttonColor, textColor)
     end
 end
 
-local function within(x,y, btn)
+local function within(x, y, btn)
     return x >= btn.x1 and x <= btn.x2 and y >= btn.y1 and y <= btn.y2
 end
 
@@ -81,39 +92,34 @@ end
 local function startRun(totalSec)
     chosenTime = totalSec
     startTime = os.clock()
-    endOfRunTime = startTime + chosenTime
-    cooldownStartTime = endOfRunTime -- cooldown starts immediately after run ends
     state = "RUNNING"
     running = true
-    setRedstoneOutput(15)   -- Turn on at full from the start
+    setRedstoneOutput(15)   -- Full power during warmup and full therapy
     clearMonitor()
 end
 
-local function drawProgressBar(elapsed)
-    -- elapsed: how long since the run started
-    -- phases:
-    -- 0 to warmupTime: warmup (bar color: warmupBarColor)
-    -- warmupTime to chosenTime: full therapy (fullBarColor)
-    -- chosenTime to chosenTime+cooldownTime: cooldown (cooldownBarColor, redstone=0)
+local function drawProgressBar()
+    local now = os.clock()
+    local elapsed = now - startTime
+    if not running then return end
 
     local totalDisplayTime = chosenTime + cooldownTime
-    local fraction = math.min(elapsed / totalDisplayTime, 1)
+    local fraction = elapsed / totalDisplayTime
+    if fraction > 1 then fraction = 1 end
+    local w, h = mon.getSize()
 
-    local barColor
-    if elapsed <= warmupTime then
-        -- warmup phase
-        barColor = warmupBarColor
-    elseif elapsed <= chosenTime then
-        -- full therapy phase
-        barColor = fullBarColor
-    else
-        -- cooldown phase
-        barColor = cooldownBarColor
-    end
-
-    local w,h = mon.getSize()
     local barHeight = 3
     local barY = math.floor(h/2)
+
+    -- Determine phase and color
+    local barColor
+    if elapsed <= warmupTime then
+        barColor = warmupBarColor
+    elseif elapsed <= chosenTime then
+        barColor = fullBarColor
+    else
+        barColor = cooldownBarColor
+    end
 
     -- Draw bar background
     mon.setBackgroundColor(barBackgroundColor)
@@ -124,11 +130,11 @@ local function drawProgressBar(elapsed)
 
     -- Fill portion of the bar
     local filledWidth = math.floor(w * fraction)
-    mon.setBackgroundColor(barColor)
-    for y = barY, barY+barHeight-1 do
-        mon.setCursorPos(1,y)
-        for x = 1, filledWidth do
-            mon.write(" ")
+    if filledWidth > 0 then
+        mon.setBackgroundColor(barColor)
+        for y = barY, barY+barHeight-1 do
+            mon.setCursorPos(1,y)
+            mon.write(string.rep(" ", filledWidth))
         end
     end
 
@@ -143,6 +149,8 @@ local function drawProgressBar(elapsed)
         timeStr = "Time Remaining: "..timeLeft.."s"
     end
 
+    mon.setBackgroundColor(backgroundColor)
+    mon.setTextColor(textColor)
     drawCenteredText(barY - 2, "Sauna Therapy Progress", backgroundColor, textColor)
     drawCenteredText(barY + barHeight + 1, timeStr, backgroundColor, textColor)
 end
@@ -152,17 +160,16 @@ local function updateRun()
     local now = os.clock()
     local elapsed = now - startTime
 
-    if elapsed <= chosenTime then
-        -- During warmup + full therapy: redstone = 15
-        setRedstoneOutput(15)
-    else
-        -- After chosenTime ends: turn off redstone
+    -- During warmup + full therapy: redstone=15
+    -- After chosenTime is reached: turn off redstone
+    if elapsed > chosenTime then
         setRedstoneOutput(0)
+    else
+        setRedstoneOutput(15)
     end
 
-    -- If we passed the cooldown end
-    if elapsed >= chosenTime + cooldownTime then
-        -- End the run
+    -- If we passed the total cycle (chosenTime + cooldownTime)
+    if elapsed >= (chosenTime + cooldownTime) then
         running = false
         state = "IDLE"
         setRedstoneOutput(0)
@@ -170,46 +177,48 @@ local function updateRun()
         return
     end
 
-    -- Redraw progress bar
-    drawProgressBar(elapsed)
+    drawProgressBar()
 end
 
 local function handleTouch(x, y)
     if state == "IDLE" then
-        -- Check if clicked a button
+        -- Check which button was clicked
         for i, btn in ipairs(buttons) do
             if within(x, y, btn) then
-                startRun(btn.time)
-                break
+                -- Start run: includes warmup (60s) + full therapy (chosenTime-60s)
+                -- chosenTime is the total run (including warmup)
+                startRun(btn.time)  
+                return
             end
         end
     elseif state == "RUNNING" then
-        -- If user clicks on the progress bar area, add 1 minute if we're still in warmup or full phase
         local now = os.clock()
         local elapsed = now - startTime
-        if elapsed <= chosenTime then
-            local w,h = mon.getSize()
+        -- If in warmup or full therapy phase, clicking bar adds +1 minute
+        if elapsed < chosenTime then
+            local h = monH
             local barY = math.floor(h/2)
             local barHeight = 3
             if y >= barY and y < barY+barHeight then
-                -- Add 60 seconds to chosenTime
                 chosenTime = chosenTime + 60
-                endOfRunTime = startTime + chosenTime
             end
         end
     end
 end
 
--- Main
+-- Setup
 drawButtonsIdle()
+local refreshTimer = os.startTimer(refreshInterval)
 
 while true do
-    updateRun()
-    local event, p1, p2, p3 = os.pullEventRaw()
+    local event, p1, p2, p3 = os.pullEvent()
     if event == "terminate" then
         setRedstoneOutput(0)
-        error("Terminated")
+        break
     elseif event == "monitor_touch" then
         handleTouch(p2, p3)
+    elseif event == "timer" and p1 == refreshTimer then
+        updateRun()
+        refreshTimer = os.startTimer(refreshInterval)
     end
 end
